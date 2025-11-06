@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>簡易俄羅斯方塊（Tetris）</title>
+  <style>
+    :root{
+      --cell-size: 28px;
+      --cols: 10;
+      --rows: 20;
+    }
+    body{font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial; display:flex; gap:24px; padding:24px; background:#0b1220; color:#e6eef8;}
+    #game { display:flex; flex-direction:column; gap:10px; }
+    #board {
+      position:relative;
+      width: calc(var(--cell-size) * var(--cols));
+      height: calc(var(--cell-size) * var(--rows));
+      background:#071226;
+      border: 6px solid #15324a;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.6), inset 0 0 30px rgba(255,255,255,0.02);
+      display:grid;
+      grid-template-columns: repeat(var(--cols), 1fr);
+      grid-template-rows: repeat(var(--rows), 1fr);
+      gap:2px;
+      padding:2px;
+    }
+    .cell{ width:100%; height:100%; background:rgba(255,255,255,0.02); border-radius:3px; transition:background .06s; }
+    .filled{ background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.12)); box-shadow: inset 0 -6px 12px rgba(0,0,0,0.35); }
+    #sidebar { min-width:220px; display:flex; flex-direction:column; gap:10px; }
+    .panel { background:#071827; padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); }
+    button { background:#1e90ff; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+    button.secondary { background:#2b3b48; color:#bcd3ea; }
+    #next { display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; width: calc(var(--cell-size) * 4); height: calc(var(--cell-size) * 4); }
+    .mini-cell{ width:100%; height:100%; background:transparent; border-radius:3px; }
+    footer{ margin-top:10px; color:#9fb5cf; font-size:13px;}
+    .info-row { display:flex; justify-content:space-between; gap:12px; }
+    .small { font-size:13px; color:#9fb5cf; }
+    @media (max-width:700px){
+      body{flex-direction:column; align-items:center;}
+      #sidebar{ width:100%; max-width:420px;}
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="board" aria-label="Tetris board"></div>
+    <div class="info-row small">
+      <div>Controls: ← → ↓ (move), ↑ (rotate), Space (hard drop), P (pause)</div>
+      <div id="status">Running</div>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <h3 style="margin:0">簡易俄羅斯方塊</h3>
+          <div class="small">純前端示範 / AI 輔助生成邏輯示例</div>
+        </div>
+        <div style="text-align:right">
+          <div>Score</div>
+          <div id="score" style="font-size:20px">0</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button id="startBtn">開始遊戲</button>
+        <button id="pauseBtn" class="secondary">暫停</button>
+        <button id="resetBtn" class="secondary">重設</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <strong>下一塊</strong>
+        </div>
+        <div class="small">Level: <span id="level">1</span></div>
+      </div>
+      <div id="next" style="margin-top:8px"></div>
+      <div style="margin-top:8px;" class="small">消行得分規則：1 行=100、2 行=300、3 行=500、4 行=800</div>
+    </div>
+
+    <div class="panel">
+      <strong>AI 協助示例</strong>
+      <p class="small">此處示範如何用生成式 AI 產生或優化「掉落速度與方塊機率」。實際呼叫 GPT 時請置於後端以保障 API Key。</p>
+      <button id="aiGenerate" class="secondary">用 AI 生成調整參數（模擬）</button>
+      <div id="aiOutput" class="small" style="margin-top:8px; white-space:pre-wrap;"></div>
+    </div>
+
+    <div class="panel">
+      <strong>說明</strong>
+      <div class="small">將此檔案直接部署到 Replit 或 GitHub Pages 即可。若需要我幫你把 AI 實作拉到後端（Node.js 代理），我也可以提供後端範例。</div>
+    </div>
+
+    <footer class="panel small">
+      作者：比賽參賽者 | AI 協助：提示 & 生成邏輯示例
+    </footer>
+  </div>
+
+<script>
+/* app.js - 內嵌於 index.html 以便直接部署 */
+/* 簡易 Tetris 實作：10x20 board, 基本方塊與碰撞、消行、計分、下一塊與等級 */
+(() => {
+  const COLS = 10, ROWS = 20;
+  const boardEl = document.getElementById('board');
+  const nextEl = document.getElementById('next');
+  const scoreEl = document.getElementById('score');
+  const levelEl = document.getElementById('level');
+  const statusEl = document.getElementById('status');
+  const aiOutputEl = document.getElementById('aiOutput');
+
+  let cells = []; // DOM cells
+  let board = []; // logical board: 0 empty, >0 filled
+  let current = null;
+  let nextPiece = null;
+  let score = 0;
+  let level = 1;
+  let linesCleared = 0;
+  let tickInterval = 800; // ms
+  let timer = null;
+  let running = false;
+  let paused = false;
+
+  const COLORS = {
+    1: '#00aaff', // I
+    2: '#ffb300', // O
+    3: '#9b59b6', // T
+    4: '#2ecc71', // S
+    5: '#e74c3c', // Z
+    6: '#f39c12', // J
+    7: '#34495e'  // L
+  };
+
+  const SHAPES = {
+    1: [[[1,1,1,1]]], // I
+    2: [[[1,1],[1,1]]], // O
+    3: [[[0,1,0],[1,1,1]]], // T
+    4: [[[0,1,1],[1,1,0]]], // S
+    5: [[[1,1,0],[0,1,1]]], // Z
+    6: [[[1,0,0],[1,1,1]]], // J
+    7: [[[0,0,1],[1,1,1]]]  // L
+  };
+
+  // helper: rotate matrix clockwise
+  function rotate(matrix) {
+    const h = matrix.length, w = matrix[0].length;
+    const out = Array.from({length: w}, ()=>Array(h).fill(0));
+    for(let r=0;r<h;r++) for(let c=0;c<w;c++) out[c][h-1-r]=matrix[r][c];
+    return out;
+  }
+
+  function makeEmptyBoard(){
+    board = Array.from({length: ROWS}, ()=>Array(COLS).fill(0));
+    renderBoard();
+  }
+
+  function initDOM(){
+    boardEl.innerHTML = '';
+    cells = [];
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const el = document.createElement('div');
+        el.className = 'cell';
+        el.style.width = '100%';
+        boardEl.appendChild(el);
+        cells.push(el);
+      }
+    }
+    renderBoard();
+    // next
+    nextEl.innerHTML = '';
+    for(let i=0;i<16;i++){
+      const m = document.createElement('div');
+      m.className = 'mini-cell';
+      nextEl.appendChild(m);
+    }
+  }
+
+  function renderBoard(){
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const v = board[r][c];
+        const idx = r*COLS + c;
+        const el = cells[idx];
+        if(v === 0){
+          el.className = 'cell';
+          el.style.background = 'rgba(255,255,255,0.02)';
+        } else {
+          el.className = 'cell filled';
+          el.style.background = COLORS[v] || '#999';
+        }
+      }
+    }
+    // render current piece on top
+    if(current){
+      const {shape, row, col, type} = current;
+      for(let r=0;r<shape.length;r++){
+        for(let c=0;c<shape[0].length;c++){
+          if(shape[r][c]){
+            const rr = row + r, cc = col + c;
+            if(rr>=0 && rr<ROWS && cc>=0 && cc<COLS){
+              const idx = rr*COLS + cc;
+              const el = cells[idx];
+              el.className = 'cell filled';
+              el.style.background = COLORS[type];
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function spawnPiece(type){
+    const shape = SHAPES[type][0].map(row=>row.slice()); // copy
+    const col = Math.floor((COLS - shape[0].length)/2);
+    return {type, shape, row: -shape.length, col};
+  }
+
+  function rotateCurrent(){
+    if(!current) return;
+    const newShape = rotate(current.shape);
+    if(!collides(current.row, current.col, newShape)){
+      current.shape = newShape;
+    }
+  }
+
+  function collides(row, col, shape){
+    for(let r=0;r<shape.length;r++){
+      for(let c=0;c<shape[0].length;c++){
+        if(shape[r][c]){
+          const rr = row + r, cc = col + c;
+          if(cc<0 || cc>=COLS) return true;
+          if(rr>=ROWS) return true;
+          if(rr>=0 && board[rr][cc]) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function lockPiece(){
+    const {shape, row, col, type} = current;
+    for(let r=0;r<shape.length;r++){
+      for(let c=0;c<shape[0].length;c++){
+        if(shape[r][c]){
+          const rr = row + r, cc = col + c;
+          if(rr>=0 && rr<ROWS && cc>=0 && cc<COLS) board[rr][cc] = type;
+        }
+      }
+    }
+    clearLines();
+    current = null;
+    nextSpawn();
+  }
+
+  function clearLines(){
+    let cleared = 0;
+    for(let r=ROWS-1;r>=0;r--){
+      if(board[r].every(cell=>cell!==0)){
+        board.splice(r,1);
+        board.unshift(Array(COLS).fill(0));
+        cleared++;
+        r++; // re-check same row index after shift
+      }
+    }
+    if(cleared>0){
+      linesCleared += cleared;
+      const add = (cleared===1?100:cleared===2?300:cleared===3?500:800);
+      score += add;
+      scoreEl.textContent = score;
+      // level up every 10 lines
+      const newLevel = Math.floor(linesCleared/10) + 1;
+      if(newLevel !== level){
+        level = newLevel;
+        levelEl.textContent = level;
+        adjustTickByLevel();
+      }
+    }
+  }
+
+  function adjustTickByLevel(){
+    // Base speed 800ms, each level reduces by 60ms, min 120ms
+    tickInterval = Math.max(120, 800 - (level-1)*60);
+    if(running && !paused){
+      clearInterval(timer);
+      timer = setInterval(tick, tickInterval);
+    }
+  }
+
+  function nextSpawn(){
+    current = nextPiece || spawnPiece(randomTypeWeighted());
+    nextPiece = spawnPiece(randomTypeWeighted());
+    renderNext();
+    if(collides(current.row, current.col, current.shape)){
+      gameOver();
+    }
+  }
+
+  // A simple weighted random - default uniform
+  function randomTypeWeighted(){
+    // Example weights (can be adjusted by AI): I:1,O:1,T:1,S:1,Z:1,J:1,L:1
+    const weights = window.aiWeights || [1,1,1,1,1,1,1];
+    const total = weights.reduce((s,n)=>s+n,0);
+    let r = Math.random()*total;
+    for(let i=0;i<weights.length;i++){
+      if(r < weights[i]) return i+1;
+      r -= weights[i];
+    }
+    return 1;
+  }
+
+  function renderNext(){
+    const els = Array.from(nextEl.children);
+    els.forEach(e=>{ e.style.background='transparent'; });
+    const shape = nextPiece.shape;
+    // render into 4x4 grid, centered
+    const grid = Array.from({length:4}, ()=>Array(4).fill(0));
+    const rOff = Math.floor((4 - shape.length)/2);
+    const cOff = Math.floor((4 - shape[0].length)/2);
+    for(let r=0;r<shape.length;r++){
+      for(let c=0;c<shape[0].length;c++){
+        if(shape[r][c]) grid[rOff+r][cOff+c] = nextPiece.type;
+      }
+    }
+    for(let r=0;r<4;r++){
+      for(let c=0;c<4;c++){
+        const idx = r*4 + c;
+        const v = grid[r][c];
+        const el = els[idx];
+        if(v){
+          el.style.background = COLORS[v];
+        } else {
+          el.style.background = 'transparent';
+        }
+      }
+    }
+  }
+
+  function tick(){
+    if(!running || paused) return;
+    if(!current) { nextSpawn(); return; }
+    if(!collides(current.row+1, current.col, current.shape)){
+      current.row++;
+    } else {
+      lockPiece();
+    }
+    renderBoard();
+  }
+
+  // controls
+  document.addEventListener('keydown', (e)=>{
+    if(!running) return;
+    if(e.key === 'p' || e.key === 'P') {
+      togglePause();
+      return;
+    }
+    if(paused) return;
+    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)){
+      e.preventDefault();
+    }
+    if(e.key === 'ArrowLeft'){
+      if(current && !collides(current.row, current.col-1, current.shape)) current.col--;
+    } else if(e.key === 'ArrowRight'){
+      if(current && !collides(current.row, current.col+1, current.shape)) current.col++;
+    } else if(e.key === 'ArrowDown'){
+      if(current && !collides(current.row+1, current.col, current.shape)) current.row++;
+    } else if(e.key === 'ArrowUp'){
+      rotateCurrent();
+    } else if(e.key === ' '){
+      // hard drop
+      if(current){
+        while(!collides(current.row+1, current.col, current.shape)) current.row++;
+        lockPiece();
+      }
+    }
+    renderBoard();
+  });
+
+  // UI buttons
+  document.getElementById('startBtn').addEventListener('click', ()=>{
+    startGame();
+  });
+  document.getElementById('pauseBtn').addEventListener('click', togglePause);
+  document.getElementById('resetBtn').addEventListener('click', resetGame);
+
+  function startGame(){
+    if(running) return;
+    running = true;
+    paused = false;
+    statusEl.textContent = 'Running';
+    makeEmptyBoard();
+    initDOM();
+    score = 0; linesCleared = 0; level = 1;
+    scoreEl.textContent = 0; levelEl.textContent = 1;
+    nextPiece = spawnPiece(randomTypeWeighted());
+    current = null;
+    adjustTickByLevel();
+    timer = setInterval(tick, tickInterval);
+  }
+
+  function togglePause(){
+    if(!running) return;
+    paused = !paused;
+    statusEl.textContent = paused? 'Paused' : 'Running';
+    if(paused){
+      clearInterval(timer);
+    } else {
+      timer = setInterval(tick, tickInterval);
+    }
+  }
+
+  function resetGame(){
+    running = false;
+    paused = false;
+    clearInterval(timer);
+    makeEmptyBoard();
+    initDOM();
+    score = 0; level = 1; linesCleared = 0;
+    scoreEl.textContent = 0; levelEl.textContent = 1;
+    statusEl.textContent = 'Ready';
+  }
+
+  function gameOver(){
+    running = false;
+    clearInterval(timer);
+    statusEl.textContent = 'Game Over';
+    alert('Game Over! 分數: ' + score);
+  }
+
+  // AI 模擬按鈕：示範如何用 GPT 幫忙生成或優化參數
+  document.getElementById('aiGenerate').addEventListener('click', async ()=>{
+    // 這裡我們用模擬結果（本地演示）來替代實際 GPT 呼叫。
+    // 實際整合時：前端送當前 level/score/lines 給後端，後端呼叫 GPT，回傳 JSON 結果。
+    aiOutputEl.textContent = '正在模擬向 GPT 發送請求...';
+    await new Promise(r=>setTimeout(r,800));
+    // 模擬 GPT 回傳：建議新的 weights 與基礎速度修正
+    const simulated = {
+      advice: "為了增加遊戲節奏感，建議 I 與 T 方塊出現機率提高，並於等級 3 後加速。建議權重: [I,O,T,S,Z,J,L] => [1.4,0.9,1.3,0.9,0.8,0.8,0.9], speed_factor: 0.92"
+    };
+    aiOutputEl.textContent = JSON.stringify(simulated, null, 2);
+    // 將權重應用到本地遊戲（示範：解析權重）
+    window.aiWeights = [1.4,0.9,1.3,0.9,0.8,0.8,0.9];
+    // speed_factor 可在 level 計算時用；我們這裡簡單減少 tickInterval 原始值
+    // 將 base tickInterval 乘上 speed_factor
+    // 先示範直接調整：
+    const speedFactor = 0.92;
+    tickInterval = Math.max(120, Math.round(tickInterval * speedFactor));
+    if(running && !paused){
+      clearInterval(timer);
+      timer = setInterval(tick, tickInterval);
+    }
+  });
+
+  // 初始化
+  makeEmptyBoard();
+  initDOM();
+  statusEl.textContent = 'Ready';
+
+})();
+</script>
+</body>
+</html>
