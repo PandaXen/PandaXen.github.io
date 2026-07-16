@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>💣 炸彈大挑戰 (20-30 模式)</title>
+    <style>
+        body { font-family: '微軟正黑體', sans-serif; text-align: center; background-color: #f0f3f7; padding: 20px; }
+        #game-container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .bomb-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 25px 0; justify-content: center; padding: 15px; background: #fafafa; border-radius: 10px; min-height: 150px; }
+        .bomb { font-size: 28px; transition: all 0.3s ease; width: 35px; }
+        .bomb.removed { opacity: 0; transform: scale(0); width: 0; margin: 0; }
+        .controls button { padding: 12px 25px; font-size: 18px; cursor: pointer; border: none; border-radius: 10px; background-color: #e67e22; color: white; margin: 5px; box-shadow: 0 4px 0 #d35400; }
+        .controls button:active { transform: translateY(4px); box-shadow: none; }
+        .controls button:disabled { background-color: #bdc3c7; box-shadow: none; cursor: not-allowed; }
+        .setup-section { background: #ecf0f1; padding: 20px; border-radius: 15px; margin-bottom: 20px; text-align: left; }
+        .setup-item { margin: 15px 0; display: flex; align-items: center; justify-content: space-between; }
+        input[type="number"] { padding: 8px; font-size: 16px; border-radius: 5px; border: 2px solid #3498db; width: 80px; text-align: center; }
+        .status-box { font-size: 1.3em; font-weight: bold; margin: 15px 0; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .log { color: #e74c3c; font-weight: bold; min-height: 24px; margin-top: 10px; }
+        .hint { font-size: 0.9em; color: #7f8c8d; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <h1>💣 炸彈邏輯挑戰 (20-30)</h1>
+    
+    <div id="setup">
+        <div class="setup-section">
+            <div class="setup-item">
+                <label><strong>設定炸彈總數 (20-30)：</strong></label>
+                <input type="number" id="total-bombs-input" value="20" min="20" max="30" oninput="validateInput(this)">
+            </div>
+            <p class="hint">💡 提示：炸彈的數目會影響決定先手/後手</p>
+            <hr>
+            <div class="setup-item">
+                <label>🎮 遊戲模式：</label>
+                <select id="mode" onchange="toggleOrderSelect()" style="padding:5px;">
+                    <option value="pve">對戰電腦 (挑戰 AI)</option>
+                    <option value="pvp">雙人對戰 (朋友練習)</option>
+                </select>
+            </div>
+            <div id="order-select-area" class="setup-item">
+                <label>🏁 出手順序：</label>
+                <select id="first-player" style="padding:5px;">
+                    <option value="player">我先開始</option>
+                    <option value="computer">電腦先開始</option>
+                </select>
+            </div>
+        </div>
+        <button onclick="startGame()" style="padding: 15px; background: #27ae60; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 20px; width: 100%; font-weight: bold;">確認並開始</button>
+    </div>
+
+    <div id="game-area" style="display:none;">
+        <div class="status-box" id="statusText">剩餘：20</div>
+        <div class="bomb-grid" id="bombGrid"></div>
+        <div class="controls" id="moveControls">
+            <button onclick="handleMove(1)">拿 1 個</button>
+            <button onclick="handleMove(2)">拿 2 個</button>
+            <button onclick="handleMove(3)">拿 3 個</button>
+        </div>
+        <p class="log" id="actionLog"></p>
+        <button onclick="resetToMenu()" style="background: none; border: 1px solid #ccc; color: #95a5a6; margin-top: 25px; cursor: pointer; padding: 5px 15px; border-radius: 5px;">返回重新設定</button>
+    </div>
+</div>
+
+<script>
+    let bombs = 20;
+    let isPvE = true;
+    let turn = ""; 
+
+    function validateInput(input) {
+        if (input.value > 30) input.value = 30;
+        if (input.value < 20 && input.value !== "") input.value = 20;
+    }
+
+    function toggleOrderSelect() {
+        const mode = document.getElementById('mode').value;
+        document.getElementById('order-select-area').style.display = (mode === 'pvp') ? 'none' : 'block';
+    }
+
+    function startGame() {
+        let inputVal = parseInt(document.getElementById('total-bombs-input').value);
+        if (isNaN(inputVal)) inputVal = 20;
+        
+        bombs = inputVal;
+        isPvE = document.getElementById('mode').value === 'pve';
+        const first = document.getElementById('first-player').value;
+        
+        turn = (isPvE && first === 'computer') ? "player2" : "player1";
+        
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('game-area').style.display = 'block';
+        
+        renderInitialBombs();
+        updateDisplay();
+        
+        if (isPvE && turn === "player2") {
+            setTimeout(computerMove, 1000);
+        }
+    }
+
+    function renderInitialBombs() {
+        const grid = document.getElementById('bombGrid');
+        grid.innerHTML = '';
+        for (let i = 0; i < bombs; i++) {
+            const div = document.createElement('div');
+            div.className = 'bomb';
+            div.innerText = '💣';
+            div.id = 'bomb-' + i;
+            grid.appendChild(div);
+        }
+    }
+
+    function updateDisplay() {
+        let name = (turn === "player1") ? "玩家 1" : (isPvE ? "電腦" : "玩家 2");
+        document.getElementById('statusText').innerText = `剩餘炸彈：${bombs} | 輪到：${name}`;
+        
+        const btns = document.getElementById('moveControls').getElementsByTagName('button');
+        for (let i = 0; i < 3; i++) {
+            btns[i].disabled = (i + 1 > bombs) || (isPvE && turn === "player2");
+        }
+    }
+
+    function handleMove(count) {
+        if (count > bombs) return;
+        executeMove(count);
+    }
+
+    function executeMove(count) {
+        let name = (turn === "player1") ? "玩家 1" : (isPvE ? "電腦" : "玩家 2");
+        document.getElementById('actionLog').innerText = `${name} 拿走了 ${count} 個！`;
+        
+        for (let i = 0; i < count; i++) {
+            const b = document.getElementById('bomb-' + (bombs - 1 - i));
+            if (b) b.classList.add('removed');
+        }
+
+        bombs -= count;
+        
+        if (bombs === 0) {
+            updateDisplay();
+            setTimeout(() => {
+                alert(`💥 砰！最後一顆被 ${name} 拿走了，他輸了！`);
+                resetToMenu();
+            }, 300);
+            return;
+        }
+
+        turn = (turn === "player1") ? "player2" : "player1";
+        updateDisplay();
+
+        if (isPvE && turn === "player2") {
+            setTimeout(computerMove, 1000);
+        }
+    }
+
+    function computerMove() {
+        // 核心數學邏輯：目標 (4n + 1)
+        let move = (bombs - 1) % 4;
+        if (move === 0) move = 1; 
+        executeMove(move);
+    }
+
+    function resetToMenu() {
+        document.getElementById('setup').style.display = 'block';
+        document.getElementById('game-area').style.display = 'none';
+        document.getElementById('actionLog').innerText = '';
+    }
+</script>
+</body>
+</html>
