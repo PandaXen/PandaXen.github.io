@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Husky STEAM Lab - English Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap');
+
+        :root {
+            --primary-bg: #f0f9ff;
+            --board-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --tile-default: #ffffff;
+            --tile-border: #cbd5e1;
+            --tile-text: #334155;
+            --correct-color: #10b981;
+            --present-color: #f59e0b;
+            --absent-color: #94a3b8;
+            --brand-blue: #0ea5e9;
+            --brand-dark: #0f172a;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--primary-bg);
+            background-image: radial-gradient(#bae6fd 1px, transparent 1px);
+            background-size: 24px 24px;
+            touch-action: manipulation;
+            color: var(--text-main);
+            height: 100dvh; 
+        }
+
+        /* Views Management */
+        .view-section {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+        }
+        .view-section.active {
+            display: flex;
+        }
+
+        /* Game Board Area */
+        .game-container {
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .hint-container {
+            background: white;
+            border-radius: 16px;
+            border: 2px solid #e0f2fe;
+            box-shadow: 0 4px 0 -1px #e0f2fe;
+        }
+
+        /* Tile Styling */
+        .tile {
+            width: 100%;
+            aspect-ratio: 1;
+            background-color: var(--tile-default);
+            border: 2px solid var(--tile-border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            font-weight: 900;
+            color: var(--tile-text);
+            box-shadow: 0 3px 0 #cbd5e1;
+            transition: transform 0.1s, border-color 0.2s, background-color 0.3s;
+            user-select: none;
+        }
+
+        @media (max-width: 400px) {
+            .tile {
+                font-size: 1.5rem;
+                border-radius: 6px;
+                box-shadow: 0 2px 0 #cbd5e1;
+            }
+        }
+
+        /* Tile States */
+        .tile.filled {
+            border-color: #94a3b8;
+            color: var(--brand-dark);
+            animation: popIn 0.1s ease-out forwards;
+        }
+
+        .tile.correct {
+            background-color: var(--correct-color);
+            border-color: #059669;
+            box-shadow: 0 3px 0 #047857;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .tile.present {
+            background-color: var(--present-color);
+            border-color: #d97706;
+            box-shadow: 0 3px 0 #b45309;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .tile.absent {
+            background-color: var(--absent-color);
+            border-color: #64748b;
+            box-shadow: 0 3px 0 #475569;
+            color: white;
+        }
+
+        /* Input Row Container */
+        .row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.375rem;
+            margin-bottom: 0.5rem;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: slideUp 0.3s ease-out forwards;
+        }
+
+        /* Keyboard */
+        .keyboard-container {
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            box-shadow: 0 -4px 10px -2px rgba(14, 165, 233, 0.1);
+            border-radius: 20px 20px 0 0;
+            padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); 
+        }
+        
+        .key {
+            background-color: #f8fafc;
+            border-radius: 6px;
+            font-weight: 800;
+            color: #475569;
+            box-shadow: 0 3px 0 #cbd5e1;
+            transition: all 0.1s active;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+        
+        .key:active {
+            transform: translateY(3px);
+            box-shadow: none;
+        }
+        
+        .key.correct { background-color: var(--correct-color); color: white; border-color: #059669; box-shadow: 0 3px 0 #047857; }
+        .key.present { background-color: var(--present-color); color: white; border-color: #d97706; box-shadow: 0 3px 0 #b45309; }
+        .key.absent { background-color: var(--absent-color); color: white; border-color: #64748b; box-shadow: 0 3px 0 #475569; opacity: 0.8; }
+
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--brand-blue), #0284c7);
+            box-shadow: 0 4px 0 #0369a1;
+            transition: all 0.1s;
+            color: white;
+            border: none;
+        }
+        .btn-primary:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #0369a1;
+        }
+        
+        .btn-hint {
+            background: #fff7ed;
+            color: #ea580c;
+            border: 1px solid #fed7aa;
+            box-shadow: 0 2px 0 #fed7aa;
+            transition: all 0.1s;
+        }
+        .btn-hint:active {
+            transform: translateY(2px);
+            box-shadow: none;
+        }
+
+        /* Animations */
+        @keyframes popIn {
+            0% { transform: scale(0.8); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes flip {
+            0% { transform: rotateX(0); }
+            50% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0); }
+        }
+        
+        @keyframes slideUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(3deg); }
+            50% { transform: translateY(-10px) rotate(3deg); }
+            100% { transform: translateY(0px) rotate(3deg); }
+        }
+
+        .animate-flip { animation: flip 0.6s ease forwards; }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        
+        /* Husky 9 positioning - INSIDE Hint Box */
+        #thinking-husky {
+            position: absolute;
+            bottom: 0;
+            right: 10px; 
+            width: 80px; 
+            z-index: 25; /* Higher than text/buttons to cover the line */
+            transform: translateY(100%); 
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+        #thinking-husky.peeking {
+            transform: translateY(0); 
+        }
+
+        /* Scrollbar */
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="w-screen flex flex-col overflow-hidden text-sm md:text-base">
+
+    <!-- COVER PAGE -->
+    <section id="cover-view" class="view-section active overflow-y-auto bg-white p-4 items-center justify-center text-center relative">
+        <button onclick="toggleAudio()" class="absolute top-4 right-4 w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center shadow-sm border border-slate-200 text-slate-400 hover:text-sky-500 hover:bg-sky-50 transition z-50 audio-btn">
+            <i class="fas fa-volume-up"></i>
+        </button>
+
+        <div class="max-w-sm w-full flex flex-col gap-2 animate-fade-in">
+            <div class="flex flex-col items-center gap-1">
+                <div class="w-24 h-24 flex items-center justify-center animate-float">
+                    <img src="Husky8.png" alt="Husky Lab Icon" class="w-full h-full object-contain drop-shadow-xl">
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black text-slate-800 tracking-tight mb-0.5">Husky <span class="text-sky-500">STEAM Lab</span></h1>
+                    <h2 class="text-base font-bold text-slate-400 tracking-wide uppercase">English Word Challenge</h2>
+                </div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase tracking-wider mb-1">
+                    <i class="fas fa-graduation-cap"></i> Goal: 5 Words
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border-2 border-slate-100 text-left space-y-3 shadow-md relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-16 h-16 bg-yellow-50 rounded-full -mr-6 -mt-6 opacity-50"></div>
+                <h3 class="font-extrabold text-slate-700 text-base border-b border-slate-100 pb-2 mb-1 flex items-center gap-2">
+                    <i class="fas fa-clipboard-list text-sky-500"></i> Your Mission
+                </h3>
+                
+                <div class="flex items-start gap-3 group">
+                    <div class="bg-sky-100 text-sky-600 w-8 h-8 rounded-lg flex items-center justify-center font-black text-base flex-none group-hover:scale-110 transition-transform">1</div>
+                    <div>
+                        <div class="font-bold text-slate-700 text-sm">Guess the Words</div>
+                        <p class="text-slate-500 text-xs leading-tight">Use the hints to find the secret English word.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3 group">
+                    <div class="bg-purple-100 text-purple-600 w-8 h-8 rounded-lg flex items-center justify-center font-black text-base flex-none group-hover:scale-110 transition-transform">2</div>
+                    <div>
+                        <div class="font-bold text-slate-700 text-sm">Need Help?</div>
+                        <p class="text-slate-500 text-xs leading-tight">You can see the meaning, but the word score drops to 10 points.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3 group">
+                    <div class="bg-amber-100 text-amber-600 w-8 h-8 rounded-lg flex items-center justify-center font-black text-base flex-none group-hover:scale-110 transition-transform">3</div>
+                    <div>
+                        <div class="font-bold text-slate-700 text-sm">Earn Points</div>
+                        <p class="text-slate-500 text-xs leading-tight">20 Pts for a correct guess. 10 Pts if you use the hint.</p>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="startSession()" class="btn-primary w-full py-3 rounded-xl text-lg font-black uppercase tracking-wider flex items-center justify-center gap-2 transform transition hover:scale-[1.02] active:scale-[0.98] mt-2">
+                <i class="fas fa-rocket"></i> Start Mission
+            </button>
+
+            <p class="text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-1">
+                Powered by AI Generation
+            </p>
+        </div>
+    </section>
+
+
+    <!-- GAME PAGE -->
+    <section id="game-view" class="view-section relative">
+        <header class="flex-none p-2 bg-white border-b border-sky-100 z-10">
+            <div class="max-w-[500px] mx-auto flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <div id="progress-badge" class="px-2.5 py-1 bg-slate-50 rounded-lg flex items-center gap-1.5 border border-slate-200 shadow-sm">
+                        <i class="fas fa-layer-group text-slate-400 text-xs"></i>
+                        <span id="progress-display" class="font-black text-base text-slate-700">Word 1/5</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleAudio()" class="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 text-slate-400 hover:text-sky-500 hover:bg-sky-50 transition audio-btn">
+                        <i class="fas fa-volume-up text-xs"></i>
+                    </button>
+
+                     <button id="skip-btn" onclick="skipWord()" class="text-[10px] font-bold text-slate-400 hover:text-sky-500 transition flex flex-col items-center leading-none group">
+                        <div class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center mb-0.5 group-hover:bg-sky-100 group-hover:text-sky-600 transition-colors">
+                            <i class="fas fa-forward text-xs"></i>
+                        </div>
+                        <span>SKIP <span id="skips-left" class="bg-slate-200 px-1 rounded-sm">3</span></span>
+                    </button>
+
+                    <div class="pl-3 border-l border-slate-100 text-right">
+                        <span class="text-[9px] text-slate-400 font-bold uppercase block leading-none mb-0.5">Points</span>
+                        <span id="score-display" class="font-black text-xl text-sky-500 leading-none">0</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto flex flex-col items-center p-2 relative">
+            <div class="game-container flex flex-col gap-3">
+                
+                <!-- Hint Section -->
+                <div class="hint-container p-3 text-center relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-sky-50 rounded-full -mr-10 -mt-10 z-0 opacity-50"></div>
+                    <div class="absolute bottom-0 left-0 w-16 h-16 bg-yellow-50 rounded-full -ml-8 -mb-8 z-0 opacity-50"></div>
+                    
+                    <div class="flex items-center justify-center gap-2 mb-1 relative z-10">
+                        <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fas fa-lightbulb text-yellow-400"></i> Word Hints
+                        </h2>
+                    </div>
+
+                    <div id="hint-display" class="relative z-10 flex justify-center gap-2 text-3xl font-black text-slate-700 tracking-wider font-mono mb-2">
+                        <!-- Hint populated by JS -->
+                    </div>
+
+                    <!-- Dictionary Button & Text -->
+                    <div class="relative z-20 flex flex-col items-center gap-2">
+                        <button id="show-hint-btn" onclick="useHint()" class="btn-hint px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide flex items-center gap-2 hover:bg-orange-50">
+                            <i class="fas fa-book"></i> Show Meaning (Max 10 Pts)
+                        </button>
+                        
+                        <div id="hint-def-box" class="hidden w-full text-left pt-2 border-t border-slate-100 mt-1">
+                            <span class="text-[9px] font-bold text-orange-400 uppercase tracking-wider block mb-0.5 flex items-center gap-1">
+                                <i class="fas fa-book-open"></i> Meaning
+                            </span>
+                            <p id="hint-def-text" class="text-xs text-slate-600 font-bold leading-tight italic"></p>
+                        </div>
+                    </div>
+
+                    <!-- Husky 9: Thinking Dog -->
+                    <img id="thinking-husky" src="Husky9.png" alt="Thinking Husky">
+                </div>
+
+                <!-- Dynamic Board -->
+                <div id="board-container" class="w-full max-w-[350px] mx-auto">
+                    <!-- Rows added dynamically -->
+                </div>
+
+                <!-- Submit Button -->
+                <div class="w-full max-w-[350px] mx-auto">
+                    <button onclick="submitGuess()" id="submit-btn" class="btn-primary w-full py-3 rounded-xl font-black text-base tracking-wide uppercase flex items-center justify-center gap-2 group shadow-lg shadow-sky-200">
+                        <span>Check Word</span>
+                        <i class="fas fa-check-circle text-lg"></i>
+                    </button>
+                </div>
+                
+                <div class="h-2"></div>
+            </div>
+        </main>
+
+        <div class="keyboard-container flex-none p-2 z-20 relative">
+            <div class="max-w-[600px] mx-auto flex flex-col gap-1.5">
+                <div class="flex justify-center gap-1 w-full">
+                    <button class="key flex-1" data-key="Q">Q</button>
+                    <button class="key flex-1" data-key="W">W</button>
+                    <button class="key flex-1" data-key="E">E</button>
+                    <button class="key flex-1" data-key="R">R</button>
+                    <button class="key flex-1" data-key="T">T</button>
+                    <button class="key flex-1" data-key="Y">Y</button>
+                    <button class="key flex-1" data-key="U">U</button>
+                    <button class="key flex-1" data-key="I">I</button>
+                    <button class="key flex-1" data-key="O">O</button>
+                    <button class="key flex-1" data-key="P">P</button>
+                </div>
+                <div class="flex justify-center gap-1 w-full px-3">
+                    <button class="key flex-1" data-key="A">A</button>
+                    <button class="key flex-1" data-key="S">S</button>
+                    <button class="key flex-1" data-key="D">D</button>
+                    <button class="key flex-1" data-key="F">F</button>
+                    <button class="key flex-1" data-key="G">G</button>
+                    <button class="key flex-1" data-key="H">H</button>
+                    <button class="key flex-1" data-key="J">J</button>
+                    <button class="key flex-1" data-key="K">K</button>
+                    <button class="key flex-1" data-key="L">L</button>
+                </div>
+                <div class="flex justify-center gap-1 w-full px-6">
+                    <button class="key flex-1" data-key="Z">Z</button>
+                    <button class="key flex-1" data-key="X">X</button>
+                    <button class="key flex-1" data-key="C">C</button>
+                    <button class="key flex-1" data-key="V">V</button>
+                    <button class="key flex-1" data-key="B">B</button>
+                    <button class="key flex-1" data-key="N">N</button>
+                    <button class="key flex-1" data-key="M">M</button>
+                    <button class="key w-12 bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-100 shadow-[0_3px_0_#fda4af]" data-key="BACKSPACE">
+                        <i class="fas fa-backspace"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="dict-modal" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+            <div id="dict-modal-content" class="bg-white rounded-2xl p-4 w-full max-w-xs shadow-2xl flex flex-col gap-3 animate-popIn border-t-8 border-green-500 relative">
+                
+                <img id="happy-husky" src="Husky10.png" class="absolute -top-14 -right-2 w-20 h-20 object-contain hidden z-50 drop-shadow-lg" alt="Happy Husky">
+
+                <div class="text-center">
+                    <div id="dict-icon-bg" class="inline-block p-2 rounded-full bg-green-100 text-green-600 mb-1 shadow-sm">
+                        <i id="dict-icon" class="fas fa-check text-xl"></i>
+                    </div>
+                    <h2 id="dict-title" class="text-xl font-black text-slate-800 tracking-tight">CORRECT!</h2>
+                    <div id="dict-subtitle" class="text-[10px] font-bold text-green-600 bg-green-50 inline-block px-2 py-0.5 rounded-full">+20 Pts</div>
+                </div>
+                
+                <div class="w-full h-36 bg-slate-50 rounded-xl overflow-hidden border-2 border-slate-100 relative shadow-inner">
+                    <div id="dict-img-loader" class="absolute inset-0 flex items-center justify-center text-slate-300">
+                        <i class="fas fa-spinner fa-spin text-2xl"></i>
+                    </div>
+                    <img id="dict-img" class="w-full h-full object-cover relative z-10 opacity-0 transition-opacity duration-500 hover:scale-105 transition-transform duration-700" alt="Word Illustration">
+                </div>
+                
+                <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 text-left">
+                    <div class="flex justify-between items-end mb-1 border-b border-blue-100 pb-1">
+                        <h3 id="dict-word" class="text-lg font-black text-blue-600">WORD</h3>
+                        <span id="dict-pos" class="hidden text-[10px] font-bold uppercase px-2 py-0.5 rounded text-white tracking-wider shadow-sm"></span>
+                    </div>
+                    <p id="dict-def" class="text-slate-600 text-xs font-medium leading-relaxed">Loading definition...</p>
+                </div>
+
+                <button id="dict-btn" onclick="nextWordFromModal()" class="btn-primary w-full py-3 rounded-xl font-black text-base uppercase tracking-wider shadow-lg shadow-sky-200">
+                    Next Word <i class="fas fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+
+
+    <section id="summary-view" class="view-section bg-slate-900 items-center justify-center p-4 text-center overflow-y-auto">
+        <div class="max-w-sm w-full bg-white rounded-3xl p-5 shadow-2xl animate-fade-in flex flex-col items-center gap-4 my-4 relative">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-sky-400 via-purple-400 to-sky-400 rounded-t-3xl"></div>
+            
+            <div class="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center shadow-lg border-4 border-white -mt-2 mb-1 relative z-10">
+                <img src="Husky11.png" alt="Learned Husky" class="w-full h-full object-contain rounded-full">
+            </div>
+            
+            <div>
+                <h2 id="summary-title" class="text-2xl font-black text-slate-800 tracking-tight">Great Job!</h2>
+                <p class="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-0.5">Session Complete</p>
+            </div>
+
+            <div class="flex gap-3 w-full">
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Score</div>
+                    <div id="final-score" class="text-3xl font-black text-sky-500">0</div>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Words Found</div>
+                    <div id="final-words" class="text-3xl font-black text-slate-700">0</div>
+                </div>
+            </div>
+
+            <div class="w-full text-left flex-1 min-h-0 flex flex-col">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1 flex items-center gap-2">
+                    <i class="fas fa-book-open"></i> Knowledge Gained
+                </h3>
+                <div id="summary-list" class="bg-slate-50 border border-slate-100 rounded-xl max-h-48 overflow-y-auto custom-scroll p-2 flex flex-col gap-2 shadow-inner">
+                    <div class="p-4 text-center text-slate-400 text-xs font-medium">No words solved yet!</div>
+                </div>
+            </div>
+
+            <button onclick="showCoverPage()" class="btn-primary w-full py-3 rounded-xl font-black text-base uppercase flex items-center justify-center gap-2 mt-1 shadow-lg shadow-sky-200">
+                <i class="fas fa-redo"></i> Play Again
+            </button>
+        </div>
+    </section>
+
+    <div id="toast" class="fixed top-24 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-xl transition-all duration-300 opacity-0 translate-y-4 font-bold text-sm pointer-events-none z-[60] flex items-center gap-2">
+        <i class="fas fa-info-circle text-sky-400"></i> <span id="toast-msg">Message</span>
+    </div>
+
+    <script>
+        const AudioEngine = {
+            ctx: null,
+            isMuted: false,
+            bgmInterval: null,
+            
+            init: function() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+            toggle: function() {
+                this.isMuted = !this.isMuted;
+                this.updateUI();
+                if (this.isMuted) {
+                    this.stopBGM();
+                } else {
+                    this.startBGM();
+                }
+                return this.isMuted;
+            },
+            updateUI: function() {
+                const btns = document.querySelectorAll('.audio-btn i');
+                btns.forEach(icon => {
+                    if (this.isMuted) {
+                        icon.className = 'fas fa-volume-mute text-rose-400';
+                    } else {
+                        icon.className = 'fas fa-volume-up';
+                    }
+                });
+            },
+            playTone: function(freq, type, duration, delay = 0, vol = 0.1) {
+                if (!this.ctx || this.isMuted) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                const now = this.ctx.currentTime + delay;
+                osc.start(now);
+                gain.gain.setValueAtTime(vol, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                osc.stop(now + duration);
+            },
+            playBackgroundNote: function() {
+                if (this.isMuted) return;
+                const pentatonic = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25]; 
+                const freq = pentatonic[Math.floor(Math.random() * pentatonic.length)];
+                this.playTone(freq, 'sine', 0.8, 0, 0.03); 
+            },
+            startBGM: function() {
+                if (this.bgmInterval) clearInterval(this.bgmInterval);
+                this.bgmInterval = setInterval(() => {
+                    if (state.status === 'playing') {
+                        this.playBackgroundNote();
+                    }
+                }, 800);
+            },
+            stopBGM: function() {
+                if (this.bgmInterval) {
+                    clearInterval(this.bgmInterval);
+                    this.bgmInterval = null;
+                }
+            },
+            playPop: function() {
+                this.init();
+                this.playTone(600, 'sine', 0.1, 0, 0.05);
+            },
+            playBonk: function() {
+                this.init();
+                this.playTone(150, 'sawtooth', 0.15, 0, 0.1);
+                this.playTone(100, 'sawtooth', 0.15, 0.05, 0.1);
+            },
+            playChime: function() {
+                this.init();
+                this.playTone(523.25, 'sine', 0.3, 0, 0.2); 
+                this.playTone(659.25, 'sine', 0.3, 0.1, 0.2); 
+                this.playTone(783.99, 'sine', 0.6, 0.2, 0.2); 
+            },
+            playFanfare: function() {
+                this.init();
+                const t = 0.15;
+                this.playTone(523.25, 'square', t, 0, 0.1); 
+                this.playTone(523.25, 'square', t, t, 0.1); 
+                this.playTone(523.25, 'square', t, t*2, 0.1); 
+                this.playTone(659.25, 'square', t*3, t*3, 0.1); 
+                this.playTone(783.99, 'square', t*3, t*4, 0.1); 
+                this.playTone(1046.50, 'square', 0.8, t*5, 0.1); 
+            }
+        };
+
+        const WORD_LIST = [
+            "ANGRY", "APPLE", "BEACH", "BOARD", "BRAIN", "BREAD", "BRUSH", "CANDY", 
+            "CATCH", "CHAIR", "CHEST", "CHORD", "CLASS", "CLEAN", "CLICK", "CLIMB", 
+            "CLOCK", "CLOUD", "COLOR", "CREAM", "DANCE", "DIRTY", "DREAM", "DRINK", 
+            "DRIVE", "EAGLE", "EARTH", "ENTER", "FEAST", "FIELD", "FLOOR", "FRUIT", 
+            "FUNNY", "GLOBE", "GIANT", "GLASS", "GOOSE", "GRAPE", "GRASS", "GREEN", 
+            "HAPPY", "HEART", "HEAVY", "HORSE", "HOUSE", "JUICE", "LAUGH", "LEARN", 
+            "LEMON", "LIGHT", "LUNCH", "MAGIC", "MELON", "METAL", "MONEY", "MOUSE", 
+            "MOUTH", "MUSIC", "NIGHT", "NOISE", "NURSE", "OCEAN", "ONION", "PAINT", 
+            "PANDA", "PAPER", "PARTY", "PHONE", "PILOT", "PIZZA", "PLANE", "PLANT", 
+            "PLATE", "POWER", "PUPPY", "QUEEN", "QUICK", "QUIET", "RADIO", "RIVER", 
+            "ROBOT", "ROUND", "RULER", "SHARK", "SHEEP", "SHIRT", "SHOES", "SHORT", 
+            "SHOUT", "SKIRT", "SLEEP", "SMALL", "SMART", "SMILE", "SNACK", "SNAKE", 
+            "SPACE", "SPEAK", "SPOON", "STAND", "START", "STONE", "STORM", "STORY", 
+            "SUGAR", "SWEET", "TABLE", "TEACH", "TEETH", "THROW", "TIGER", "TOAST", 
+            "TOUCH", "TRAIN", "TRUCK", "UNCLE", "VIDEO", "VISIT", "VOICE", "WASTE", 
+            "WATCH", "WATER", "WHALE", "WOMAN", "WORLD", "WRITE", "YOUTH", "ZEBRA"
+        ];
+
+        const LOCAL_DICT = {
+            "ANGRY": { pos: "Adjective", def: "Feeling mad or upset about something." },
+            "APPLE": { pos: "Noun", def: "A round red or green fruit that is crunchy and sweet." },
+            "BEACH": { pos: "Noun", def: "A sandy area by the ocean where you can swim and play." },
+            "BOARD": { pos: "Noun", def: "A flat surface on a wall for writing with chalk or markers." },
+            "BRAIN": { pos: "Noun", def: "The part inside your head that helps you think and learn." },
+            "BREAD": { pos: "Noun", def: "A common food made from flour and water, baked in an oven." },
+            "BRUSH": { pos: "Noun", def: "A tool with bristles used for painting or cleaning hair." },
+            "CANDY": { pos: "Noun", def: "Sweet food made with sugar or syrup." },
+            "CATCH": { pos: "Verb", def: "To grab or hold something that is flying through the air." },
+            "CHAIR": { pos: "Noun", def: "A piece of furniture with legs and a back for sitting on." },
+            "CHEST": { pos: "Noun", def: "A strong box for storing toys or treasures." },
+            "CHORD": { pos: "Noun", def: "A group of musical notes played together." },
+            "CLASS": { pos: "Noun", def: "A group of students learning together." },
+            "CLEAN": { pos: "Adjective", def: "Free from dirt, marks, or stains." },
+            "CLICK": { pos: "Verb", def: "To press a button on a computer mouse." },
+            "CLIMB": { pos: "Verb", def: "To go up something, like a tree or stairs." },
+            "CLOCK": { pos: "Noun", def: "A device that tells you what time it is." },
+            "CLOUD": { pos: "Noun", def: "A white, fluffy mass floating in the sky." },
+            "COLOR": { pos: "Noun", def: "Red, blue, green, and yellow are examples of this." },
+            "CREAM": { pos: "Noun", def: "The thick, fatty part of milk." },
+            "DANCE": { pos: "Verb", def: "To move your body to the rhythm of music." },
+            "DIRTY": { pos: "Adjective", def: "Not clean; covered in mud or dust." },
+            "DREAM": { pos: "Noun", def: "Pictures and stories that happen in your mind while sleeping." },
+            "DRINK": { pos: "Verb", def: "To swallow liquid like water or juice." },
+            "DRIVE": { pos: "Verb", def: "To control and move a car or vehicle." },
+            "EAGLE": { pos: "Noun", def: "A large bird with keen eyes that hunts for food." },
+            "EARTH": { pos: "Noun", def: "The planet we live on." },
+            "ENTER": { pos: "Verb", def: "To come or go into a place." },
+            "FEAST": { pos: "Noun", def: "A large, special meal with lots of good food." },
+            "FIELD": { pos: "Noun", def: "A wide area of open land, often with grass." },
+            "FLOOR": { pos: "Noun", def: "The part of a room that you stand on." },
+            "FRUIT": { pos: "Noun", def: "The sweet and fleshy part of a plant that you can eat." },
+            "FUNNY": { pos: "Adjective", def: "Causing laughter; making you giggle." },
+            "GLOBE": { pos: "Noun", def: "A round ball that shows a map of the Earth." },
+            "GIANT": { pos: "Noun", def: "An imaginary being of human form but superhuman size." },
+            "GLASS": { pos: "Noun", def: "A hard, clear material used for windows and drinking cups." },
+            "GOOSE": { pos: "Noun", def: "A large water bird with a long neck." },
+            "GRAPE": { pos: "Noun", def: "A small green or purple berry that grows in bunches." },
+            "GRASS": { pos: "Noun", def: "Green plants that cover the ground in lawns and parks." },
+            "GREEN": { pos: "Adjective", def: "The color of grass, leaves, and emeralds." },
+            "HAPPY": { pos: "Adjective", def: "Feeling joy or pleasure; glad." },
+            "HEART": { pos: "Noun", def: "The organ in your chest that pumps blood." },
+            "HEAVY": { pos: "Adjective", def: "Weighing a lot; hard to lift." },
+            "HORSE": { pos: "Noun", def: "A large animal with four legs that people ride." },
+            "HOUSE": { pos: "Noun", def: "A building where a person or family lives." },
+            "JUICE": { pos: "Noun", def: "A sweet drink made from squeezing fruits like oranges." },
+            "LAUGH": { pos: "Verb", def: "To make sounds with your voice because something is funny." },
+            "LEARN": { pos: "Verb", def: "To gain knowledge or skill by studying." },
+            "LEMON": { pos: "Noun", def: "A yellow citrus fruit that tastes very sour." },
+            "LIGHT": { pos: "Noun", def: "Energy that makes things bright so we can see." },
+            "LUNCH": { pos: "Noun", def: "A meal eaten in the middle of the day." },
+            "MAGIC": { pos: "Noun", def: "The power to do impossible things with spells or tricks." },
+            "MELON": { pos: "Noun", def: "A large, sweet fruit with a hard skin." },
+            "METAL": { pos: "Noun", def: "A hard, strong material like iron, gold, or silver." },
+            "MONEY": { pos: "Noun", def: "Coins and paper notes used to buy things." },
+            "MOUSE": { pos: "Noun", def: "A very small animal with a long tail." },
+            "MOUTH": { pos: "Noun", def: "The opening in your face used for eating and speaking." },
+            "MUSIC": { pos: "Noun", def: "Sounds put together in a way that is pleasing to hear." },
+            "NIGHT": { pos: "Noun", def: "The dark time of day when most people sleep." },
+            "NOISE": { pos: "Noun", def: "A sound, especially one that is loud or unpleasant." },
+            "NURSE": { pos: "Noun", def: "A person trained to care for sick or injured people." },
+            "OCEAN": { pos: "Noun", def: "A very large body of salt water covering much of the Earth." },
+            "ONION": { pos: "Noun", def: "A round vegetable with layers that smells strong." },
+            "PAINT": { pos: "Noun", def: "Colored liquid used to make pictures or cover walls." },
+            "PANDA": { pos: "Noun", def: "A large black and white bear from China." },
+            "PAPER": { pos: "Noun", def: "Thin sheets made from wood pulp, used for writing." },
+            "PARTY": { pos: "Noun", def: "A fun gathering of people to celebrate something special." },
+            "PHONE": { pos: "Noun", def: "A device used to talk to people who are far away." },
+            "PILOT": { pos: "Noun", def: "A person who flies an airplane." },
+            "PIZZA": { pos: "Noun", def: "A flat round bread topped with tomato sauce and cheese." },
+            "PLANE": { pos: "Noun", def: "A vehicle with wings that flies in the air." },
+            "PLANT": { pos: "Noun", def: "A living thing that grows in the ground, like a flower or tree." },
+            "PLATE": { pos: "Noun", def: "A flat dish used for holding food while you eat." },
+            "POWER": { pos: "Noun", def: "Energy that makes machines work or lights turn on." },
+            "PUPPY": { pos: "Noun", def: "A young dog." },
+            "QUEEN": { pos: "Noun", def: "A female ruler of a country, often wearing a crown." },
+            "QUICK": { pos: "Adjective", def: "Moving fast; taking a short time." },
+            "QUIET": { pos: "Adjective", def: "Making little or no sound." },
+            "RADIO": { pos: "Noun", def: "A device that plays music and news from the airwaves." },
+            "RIVER": { pos: "Noun", def: "A large natural stream of water flowing to the sea." },
+            "ROBOT": { pos: "Noun", def: "A machine that can move and do work like a human." },
+            "ROUND": { pos: "Adjective", def: "Shaped like a circle or ball." },
+            "RULER": { pos: "Noun", def: "A straight strip used to measure length." },
+            "SHARK": { pos: "Noun", def: "A large fish with sharp teeth that lives in the ocean." },
+            "SHEEP": { pos: "Noun", def: "A farm animal with thick woolly fur." },
+            "SHIRT": { pos: "Noun", def: "Clothing you wear on the upper part of your body." },
+            "SHOES": { pos: "Noun", def: "Coverings you wear on your feet to protect them." },
+            "SHORT": { pos: "Adjective", def: "Measuring a small distance from end to end." },
+            "SHOUT": { pos: "Verb", def: "To speak very loudly." },
+            "SKIRT": { pos: "Noun", def: "Clothing that hangs from the waist and has no legs." },
+            "SLEEP": { pos: "Verb", def: "To rest your body and mind with your eyes closed." },
+            "SMALL": { pos: "Adjective", def: "Little in size; not big." },
+            "SMART": { pos: "Adjective", def: "Having a good mind; clever." },
+            "SMILE": { pos: "Verb", def: "To turn up the corners of your mouth when you are happy." },
+            "SNACK": { pos: "Noun", def: "A small amount of food eaten between meals." },
+            "SNAKE": { pos: "Noun", def: "A long reptile with no legs that slithers on the ground." },
+            "SPACE": { pos: "Noun", def: "The huge area outside Earth where stars and planets are." },
+            "SPEAK": { pos: "Verb", def: "To say words; to talk." },
+            "SPOON": { pos: "Noun", def: "A utensil with a small bowl at the end, used for soup." },
+            "STAND": { pos: "Verb", def: "To be upright on your feet." },
+            "START": { pos: "Verb", def: "To begin doing something." },
+            "STONE": { pos: "Noun", def: "A small piece of rock." },
+            "STORM": { pos: "Noun", def: "Bad weather with strong winds, rain, thunder, or snow." },
+            "STORY": { pos: "Noun", def: "A tale told about people and events." },
+            "SUGAR": { pos: "Noun", def: "A sweet white substance that comes from plants." },
+            "SWEET": { pos: "Adjective", def: "Having the taste of sugar or honey." },
+            "TABLE": { pos: "Noun", def: "A piece of furniture with a flat top and legs." },
+            "TEACH": { pos: "Verb", def: "To show someone how to do something." },
+            "TEETH": { pos: "Noun", def: "The hard white parts in your mouth used for biting." },
+            "THROW": { pos: "Verb", def: "To send something through the air with your arm." },
+            "TIGER": { pos: "Noun", def: "A large wild cat with orange fur and black stripes." },
+            "TOAST": { pos: "Noun", def: "Sliced bread that has been browned and made crisp by heat." },
+            "TOUCH": { pos: "Verb", def: "To put your hand or finger on something to feel it." },
+            "TRAIN": { pos: "Noun", def: "A row of connected vehicles traveling on a railway track." },
+            "TRUCK": { pos: "Noun", def: "A large motor vehicle used for carrying heavy loads." },
+            "UNCLE": { pos: "Noun", def: "The brother of your father or mother." },
+            "VIDEO": { pos: "Noun", def: "A recording of moving pictures and sound." },
+            "VISIT": { pos: "Verb", def: "To go to see a person or place." },
+            "VOICE": { pos: "Noun", def: "The sound you make when speaking or singing." },
+            "WASTE": { pos: "Verb", def: "To use something carelessly or throw it away unnecessarily." },
+            "WATCH": { pos: "Noun", def: "A small clock that you wear on your wrist." },
+            "WATER": { pos: "Noun", def: "A clear liquid that falls as rain and is in rivers and oceans." },
+            "WHALE": { pos: "Noun", def: "A huge mammal that lives in the ocean." },
+            "WOMAN": { pos: "Noun", def: "An adult female human." },
+            "WORLD": { pos: "Noun", def: "The Earth and all the people and places on it." },
+            "WRITE": { pos: "Verb", def: "To form letters and words with a pen or pencil." },
+            "YOUTH": { pos: "Noun", def: "The time in your life when you are young." },
+            "ZEBRA": { pos: "Noun", def: "A wild African horse with black and white stripes." }
+        };
+
+        const state = {
+            secretWord: "",
+            grid: [],
+            currentGuess: "",
+            status: "idle", 
+            maxRows: 5,
+            wordLength: 5,
+            score: 0,
+            skipsLeft: 3,
+            roundResult: null, 
+            wordLimit: 5,
+            wordsPlayed: 0,
+            hintUsed: false,
+            solvedHistory: [],
+            thinkingInterval: null
+        };
+
+        const views = {
+            cover: document.getElementById('cover-view'),
+            game: document.getElementById('game-view'),
+            summary: document.getElementById('summary-view')
+        };
+        const boardContainer = document.getElementById('board-container');
+        const hintDisplay = document.getElementById('hint-display');
+        const hintDefBox = document.getElementById('hint-def-box');
+        const hintDefText = document.getElementById('hint-def-text');
+        const showHintBtn = document.getElementById('show-hint-btn');
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toast-msg');
+        
+        const progressDisplay = document.getElementById('progress-display');
+        const scoreDisplay = document.getElementById('score-display');
+        const skipsDisplay = document.getElementById('skips-left');
+        
+        const dictModal = document.getElementById('dict-modal');
+        const dictModalContent = document.getElementById('dict-modal-content');
+        const dictIconBg = document.getElementById('dict-icon-bg');
+        const dictIcon = document.getElementById('dict-icon');
+        const dictTitle = document.getElementById('dict-title');
+        const dictSubtitle = document.getElementById('dict-subtitle');
+        const dictWord = document.getElementById('dict-word');
+        const dictDef = document.getElementById('dict-def');
+        const dictPos = document.getElementById('dict-pos');
+        const dictImg = document.getElementById('dict-img');
+        const dictImgLoader = document.getElementById('dict-img-loader');
+        const dictBtn = document.getElementById('dict-btn');
+        const happyHusky = document.getElementById('happy-husky');
+
+        const finalScore = document.getElementById('final-score');
+        const finalWords = document.getElementById('final-words');
+        const summaryList = document.getElementById('summary-list');
+        const summaryTitle = document.getElementById('summary-title');
+        
+        const thinkingHusky = document.getElementById('thinking-husky');
+
+        function switchView(viewName) {
+            Object.values(views).forEach(el => el.classList.remove('active'));
+            views[viewName].classList.add('active');
+        }
+
+        function showCoverPage() {
+            switchView('cover');
+        }
+
+        function startSession() {
+            AudioEngine.init(); 
+            AudioEngine.startBGM();
+            
+            state.score = 0;
+            state.skipsLeft = 3;
+            state.solvedHistory = [];
+            state.roundResult = null;
+            state.wordsPlayed = 0;
+            
+            updateHUD();
+            switchView('game');
+            startThinkingAnimation();
+            
+            loadNextWord();
+        }
+
+        function endSession() {
+            state.status = "ended";
+            dictModal.classList.add('hidden'); 
+            stopThinkingAnimation();
+            AudioEngine.stopBGM(); 
+            AudioEngine.playFanfare();
+            
+            if (state.score === 100) {
+                summaryTitle.textContent = "Perfect Score!";
+                summaryTitle.className = "text-2xl font-black text-sky-500 tracking-tight";
+            } else if (state.score >= 60) {
+                summaryTitle.textContent = "Well Done!";
+                summaryTitle.className = "text-2xl font-black text-green-500 tracking-tight";
+            } else if (state.score >= 20) {
+                summaryTitle.textContent = "Good Job!";
+                summaryTitle.className = "text-2xl font-black text-slate-800 tracking-tight";
+            } else {
+                summaryTitle.textContent = "Good Effort!";
+                summaryTitle.className = "text-2xl font-black text-slate-600 tracking-tight";
+            }
+
+            finalScore.textContent = state.score;
+            finalWords.textContent = state.solvedHistory.length;
+            
+            summaryList.innerHTML = '';
+            if(state.solvedHistory.length === 0) {
+                summaryList.innerHTML = '<div class="p-6 text-center text-slate-400 text-sm font-medium">No words solved yet!</div>';
+            } else {
+                state.solvedHistory.forEach(item => {
+                    const el = document.createElement('div');
+                    el.className = 'bg-white p-3 rounded-2xl border border-slate-100 shadow-sm flex gap-3 items-start text-left hover:shadow-md transition-shadow';
+                    
+                    let posBadge = '';
+                    if (item.pos) {
+                        const colorClass = getPosColor(item.pos);
+                        posBadge = `<span class="ml-2 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded text-white ${colorClass}">${item.pos}</span>`;
+                    }
+
+                    const thumb = item.img ? `<img src="${item.img}" class="w-10 h-10 rounded-lg object-cover bg-slate-100 shrink-0 border border-slate-100">` : '';
+
+                    el.innerHTML = `
+                        ${thumb}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center flex-wrap mb-0.5">
+                                <span class="font-black text-sky-600 mr-1 text-sm">${item.word}</span>
+                                ${posBadge}
+                            </div>
+                            <div class="text-[10px] text-slate-500 leading-relaxed font-medium truncate">${item.def}</div>
+                        </div>
+                    `;
+                    summaryList.appendChild(el);
+                });
+            }
+
+            switchView('summary');
+        }
+
+        function updateHUD() {
+            const currentWordNum = Math.min(state.wordsPlayed + 1, state.wordLimit);
+            progressDisplay.textContent = `Word ${currentWordNum}/${state.wordLimit}`;
+            
+            scoreDisplay.textContent = state.score;
+            skipsDisplay.textContent = state.skipsLeft;
+
+            const skipBtn = document.getElementById('skip-btn');
+            if (state.skipsLeft <= 0) {
+                skipBtn.classList.add('opacity-50', 'pointer-events-none');
+            } else {
+                skipBtn.classList.remove('opacity-50', 'pointer-events-none');
+            }
+        }
+        
+        function startThinkingAnimation() {
+            stopThinkingAnimation(); 
+            state.thinkingInterval = setInterval(() => {
+                if (state.status === 'playing') {
+                    thinkingHusky.classList.add('peeking');
+                    setTimeout(() => {
+                        thinkingHusky.classList.remove('peeking');
+                    }, 3000);
+                }
+            }, 8000); 
+        }
+        
+        function stopThinkingAnimation() {
+            if (state.thinkingInterval) {
+                clearInterval(state.thinkingInterval);
+                state.thinkingInterval = null;
+            }
+            thinkingHusky.classList.remove('peeking');
+        }
+
+        function loadNextWord() {
+            state.secretWord = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
+            state.grid = []; 
+            state.currentGuess = "";
+            state.status = "playing";
+            state.roundResult = null;
+            state.hintUsed = false;
+            
+            boardContainer.innerHTML = '';
+            createRow(0);
+            resetKeyboard();
+            generateHint();
+            dictModal.classList.add('hidden');
+            happyHusky.classList.add('hidden');
+            
+            // Reset hint UI
+            hintDefBox.classList.add('hidden');
+            showHintBtn.classList.remove('hidden');
+            
+            updateHUD();
+        }
+
+        function useHint() {
+            if (state.hintUsed) return;
+            state.hintUsed = true;
+            const entry = LOCAL_DICT[state.secretWord];
+            hintDefText.textContent = entry.def;
+            hintDefBox.classList.remove('hidden');
+            showHintBtn.classList.add('hidden');
+            showToast("Hint used! Round score capped at 10 Pts");
+        }
+
+        function skipWord() {
+            if (state.skipsLeft > 0 && state.status === 'playing') {
+                state.skipsLeft--;
+                updateHUD();
+                handleRoundEnd(state.secretWord, 'skip');
+            }
+        }
+
+        function generateHint() {
+            const indices = new Set();
+            while(indices.size < 2) indices.add(Math.floor(Math.random() * 5));
+            if(Math.random() > 0.5) {
+                let third;
+                do { third = Math.floor(Math.random() * 5); } while (indices.has(third));
+                indices.add(third);
+            }
+
+            let hintHTML = "";
+            for (let i = 0; i < 5; i++) {
+                if (indices.has(i)) {
+                    const char = state.secretWord[i];
+                    hintHTML += `<span class="text-sky-500 border-b-4 border-sky-200">${char}</span>`;
+                    updateKeyboard(char, 'correct');
+                } else {
+                    hintHTML += `<span class="text-slate-300 border-b-4 border-slate-100">_</span>`;
+                }
+            }
+            hintDisplay.innerHTML = hintHTML;
+        }
+
+        function createRow(index) {
+            const row = document.createElement('div');
+            row.className = 'row';
+            row.id = `row-${index}`;
+            for (let i = 0; i < 5; i++) {
+                const tile = document.createElement('div');
+                tile.className = 'tile empty';
+                tile.id = `tile-${index}-${i}`;
+                row.appendChild(tile);
+            }
+            boardContainer.appendChild(row);
+            
+            const main = document.querySelector('main');
+            main.scrollTop = main.scrollHeight;
+        }
+
+        function handleInput(key) {
+            if (state.status !== "playing") return;
+
+            if (key === "BACKSPACE") {
+                state.currentGuess = state.currentGuess.slice(0, -1);
+                AudioEngine.playPop(); 
+                updateCurrentRow();
+                return;
+            }
+
+            if (/^[A-Z]$/.test(key)) {
+                if (state.currentGuess.length < 5) {
+                    state.currentGuess += key;
+                    AudioEngine.playPop(); 
+                    updateCurrentRow();
+                }
+            }
+        }
+
+        function updateCurrentRow() {
+            const rowIdx = state.grid.length;
+            const guess = state.currentGuess;
+            for (let c = 0; c < 5; c++) {
+                const tile = document.getElementById(`tile-${rowIdx}-${c}`);
+                if (!tile) return;
+                const letter = guess[c] || "";
+                tile.textContent = letter;
+                if (letter) {
+                    tile.classList.add('filled');
+                    tile.classList.remove('empty');
+                    tile.style.borderColor = "#94a3b8";
+                } else {
+                    tile.classList.remove('filled');
+                    tile.classList.add('empty');
+                    tile.style.borderColor = "#cbd5e1";
+                }
+            }
+        }
+
+        function submitGuess() {
+            if (state.status !== "playing") return;
+
+            const guess = state.currentGuess;
+            if (guess.length !== 5) {
+                showToast("Enter 5 letters");
+                AudioEngine.playBonk(); 
+                shakeRow(state.grid.length);
+                return;
+            }
+
+            const result = getGuessResult(guess, state.secretWord);
+            animateRow(state.grid.length, result, guess);
+            
+            state.grid.push(guess);
+            state.currentGuess = "";
+
+            if (guess === state.secretWord) {
+                state.status = "paused"; 
+                setTimeout(() => handleRoundEnd(guess, 'win'), 1500);
+            } else if (state.grid.length >= state.maxRows) {
+                 setTimeout(() => handleRoundEnd(state.secretWord, 'fail'), 1500);
+            } else {
+                AudioEngine.playBonk();
+                setTimeout(() => createRow(state.grid.length), 1500);
+            }
+        }
+
+        async function handleRoundEnd(word, resultType) {
+            state.status = "paused";
+            state.roundResult = resultType;
+            
+            dictModalContent.className = "bg-white rounded-2xl p-4 w-full max-w-xs shadow-2xl flex flex-col gap-3 animate-popIn border-t-8 relative";
+            dictIconBg.className = "inline-block p-2 rounded-full mb-1 shadow-sm";
+            dictIcon.className = "text-xl fas";
+            dictSubtitle.className = "text-[10px] font-bold inline-block px-2 py-0.5 rounded-full";
+            happyHusky.classList.add('hidden'); 
+            
+            if (resultType === 'win') {
+                AudioEngine.playChime(); 
+                dictModalContent.classList.add("border-green-500");
+                dictIconBg.classList.add("bg-green-100", "text-green-600");
+                dictIcon.classList.add("fa-check");
+                dictTitle.textContent = "CORRECT!";
+                
+                // Score logic: 20 pts if no hint, 10 pts if hint used
+                const points = state.hintUsed ? 10 : 20;
+                dictSubtitle.textContent = `+${points} Pts`;
+                
+                dictSubtitle.classList.add("text-green-600", "bg-green-50");
+                dictBtn.innerHTML = 'Next Word <i class="fas fa-arrow-right ml-1"></i>';
+                
+                happyHusky.classList.remove('hidden');
+            } else if (resultType === 'skip') {
+                AudioEngine.playBonk(); 
+                dictModalContent.classList.add("border-amber-500");
+                dictIconBg.classList.add("bg-amber-100", "text-amber-600");
+                dictIcon.classList.add("fa-forward");
+                dictTitle.textContent = "SKIPPED";
+                dictSubtitle.textContent = "+0 Pts";
+                dictSubtitle.classList.add("text-amber-600", "bg-amber-50");
+                dictBtn.innerHTML = 'Next Word <i class="fas fa-arrow-right ml-1"></i>';
+            } else if (resultType === 'fail') {
+                AudioEngine.playBonk(); 
+                dictModalContent.classList.add("border-red-500");
+                dictIconBg.classList.add("bg-red-100", "text-red-600");
+                dictIcon.classList.add("fa-times");
+                dictTitle.textContent = "NICE TRY!";
+                dictSubtitle.textContent = "+0 Pts";
+                dictSubtitle.classList.add("text-red-600", "bg-red-50");
+                dictBtn.innerHTML = 'Next Word <i class="fas fa-arrow-right ml-1"></i>';
+            }
+
+            dictWord.textContent = word;
+            dictModal.classList.remove('hidden');
+
+            dictImg.classList.remove('opacity-100');
+            dictImg.classList.add('opacity-0');
+            dictImgLoader.style.display = 'flex';
+            
+            const entry = LOCAL_DICT[word] || { pos: "Word", def: "Great job finding this word!" };
+            dictDef.textContent = entry.def;
+            
+            if (entry.pos) {
+                dictPos.textContent = entry.pos;
+                dictPos.className = `text-[10px] font-bold uppercase px-2 py-0.5 rounded text-white tracking-wider shadow-sm ${getPosColor(entry.pos)}`;
+                dictPos.classList.remove('hidden');
+            } else {
+                dictPos.classList.add('hidden');
+            }
+
+            const imgUrl = `https://placehold.co/800x600/e0f2fe/0ea5e9?text=${encodeURIComponent(word)}`;
+            
+            dictImg.src = imgUrl;
+            dictImg.onload = () => {
+                dictImgLoader.style.display = 'none';
+                dictImg.classList.remove('opacity-0');
+                dictImg.classList.add('opacity-100');
+            };
+            
+            state.solvedHistory.push({ word: word, def: entry.def, pos: entry.pos, img: imgUrl });
+        }
+
+        function nextWordFromModal() {
+            state.wordsPlayed++;
+            
+            if (state.roundResult === 'win') {
+                // Add score based on hint usage
+                state.score += (state.hintUsed ? 10 : 20);
+            }
+            
+            if (state.wordsPlayed >= state.wordLimit) {
+                endSession();
+            } else {
+                loadNextWord();
+            }
+        }
+
+        function getPosColor(pos) {
+            switch(pos) {
+                case 'Noun': return 'bg-sky-500 shadow-sky-200';      
+                case 'Verb': return 'bg-green-500 shadow-green-200';    
+                case 'Adjective': return 'bg-amber-500 shadow-amber-200'; 
+                case 'Adverb': return 'bg-purple-500 shadow-purple-200';   
+                default: return 'bg-slate-400';
+            }
+        }
+
+        function getGuessResult(guess, secret) {
+            const result = Array(5).fill('absent');
+            const secretArr = secret.split('');
+            const guessArr = guess.split('');
+
+            for (let i = 0; i < 5; i++) {
+                if (guessArr[i] === secretArr[i]) {
+                    result[i] = 'correct';
+                    secretArr[i] = null;
+                    guessArr[i] = null;
+                }
+            }
+            for (let i = 0; i < 5; i++) {
+                if (guessArr[i] && secretArr.includes(guessArr[i])) {
+                    result[i] = 'present';
+                    const idx = secretArr.indexOf(guessArr[i]);
+                    if (idx > -1) secretArr[idx] = null;
+                }
+            }
+            return result;
+        }
+
+        function animateRow(rowIdx, result, guess) {
+            for (let i = 0; i < 5; i++) {
+                const tile = document.getElementById(`tile-${rowIdx}-${i}`);
+                setTimeout(() => {
+                    tile.classList.add('animate-flip');
+                    setTimeout(() => {
+                        tile.classList.add(result[i]);
+                        tile.style.border = 'none';
+                        updateKeyboard(guess[i], result[i]);
+                    }, 300);
+                }, i * 200);
+            }
+        }
+
+        function updateKeyboard(letter, status) {
+            const btn = document.querySelector(`button[data-key="${letter}"]`);
+            if (!btn) return;
+            const priority = { 'correct': 3, 'present': 2, 'absent': 1, '': 0 };
+            const currentClass = btn.classList.contains('correct') ? 'correct' :
+                               btn.classList.contains('present') ? 'present' :
+                               btn.classList.contains('absent') ? 'absent' : '';
+            
+            if (priority[status] > priority[currentClass]) {
+                btn.classList.remove('correct', 'present', 'absent');
+                btn.classList.add(status);
+            }
+        }
+
+        function resetKeyboard() {
+            document.querySelectorAll('.key').forEach(k => {
+                k.classList.remove('correct', 'present', 'absent');
+            });
+        }
+
+        function shakeRow(rowIdx) {
+            const row = document.getElementById(`row-${rowIdx}`);
+            if(!row) return;
+            row.animate([
+                { transform: 'translateX(0)' }, { transform: 'translateX(-5px)' },
+                { transform: 'translateX(5px)' }, { transform: 'translateX(-5px)' },
+                { transform: 'translateX(0)' }
+            ], { duration: 300 });
+        }
+
+        function showToast(msg) {
+            toastMsg.textContent = msg;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, 1rem)';
+            }, 2000);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if(views.game.classList.contains('active')) {
+                if (e.key === 'Enter') submitGuess();
+                else if (e.key === 'Backspace') handleInput('BACKSPACE');
+                else handleInput(e.key.toUpperCase());
+            }
+        });
+
+        document.querySelectorAll('.key').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleInput(e.currentTarget.getAttribute('data-key'));
+                e.currentTarget.blur();
+            });
+        });
+
+    </script>
+</body>
+</html>
