@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>聖誕禮物合一合</title>
+<style>
+:root{
+  --bg:#0b2a1a;
+  --board:#0f3b27;
+  --tile-empty: rgba(255,255,255,0.04);
+  --text:#fff;
+  --accent:#e63946;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: "Segoe UI", Roboto, "Noto Sans TC", "Helvetica Neue", Arial;
+  background: linear-gradient(180deg,#071918 0%, #0b2a1a 60%, #05231b 100%);
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+
+/* container */
+.wrapper{
+  width:100%;
+  max-width:540px;
+  margin:0 auto;
+}
+
+/* header */
+.header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+.title{
+  display:flex;
+  flex-direction:column;
+}
+.title h1{
+  margin:0;
+  font-size:20px;
+  letter-spacing:1px;
+}
+.title p{
+  margin:0;
+  font-size:12px;
+  color: #cfe9d9;
+}
+.controls{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.button{
+  background:linear-gradient(180deg,#fff 0%, #f2f2f2 100%);
+  color:#111;
+  border-radius:6px;
+  padding:8px 10px;
+  font-weight:600;
+  font-size:13px;
+  cursor:pointer;
+  border:none;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+}
+.scoreboard{
+  background: rgba(255,255,255,0.06);
+  padding:8px 10px;
+  border-radius:6px;
+  text-align:center;
+  min-width:84px;
+}
+.scoreboard .label{font-size:11px;color:#cfe9d9}
+.scoreboard .value{font-size:18px;font-weight:700}
+
+/* game area */
+.game{
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  padding:18px;
+  border-radius:12px;
+  box-shadow: 0 6px 30px rgba(0,0,0,0.5);
+}
+.board{
+  position:relative;
+  width:100%;
+  padding:12px;
+  background:var(--board);
+  border-radius:10px;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.02);
+  touch-action: none;
+}
+
+/* grid background - using CSS grid for background cells */
+.grid{
+  position:relative;
+  width:100%;
+  padding:12px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.04), rgba(255,255,255,0.01));
+  border-radius:8px;
+  box-sizing:border-box;
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-gap:12px;
+}
+.cell{
+  background:var(--tile-empty);
+  padding:0;
+  border-radius:6px;
+  min-height:0;
+  overflow:hidden;
+  position:relative;
+  aspect-ratio: 1 / 1;
+}
+
+/* tile: absolute positioned within .grid container, but aligned to cell positions exactly */
+.tile{
+  position:absolute;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:6px;
+  will-change: transform, opacity, top, left;
+  transition: transform 120ms ease, top 120ms ease, left 120ms ease, opacity 120ms ease;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.25);
+  overflow:hidden;
+  z-index:10;
+  background: transparent;
+}
+.tile img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+  pointer-events:none;
+}
+
+/* overlay messages */
+.overlay{
+  position:absolute;
+  left:0;right:0;top:0;bottom:0;
+  background: linear-gradient(180deg, rgba(2,6,4,0.6), rgba(0,0,0,0.6));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  color:#fff;
+  flex-direction:column;
+  gap:12px;
+  font-size:18px;
+  z-index:60;
+}
+.overlay h2{margin:0;font-size:20px}
+.overlay p{margin:0;font-size:14px;color:#e6f7ee}
+.overlay .small{font-size:13px;color:#cfe9d9}
+
+/* path area */
+.path-area{
+  margin-top:12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:center;
+}
+.path-row{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+.path-item{
+  width:48px;height:48px;border-radius:6px;overflow:hidden;background:rgba(255,255,255,0.03);
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(0,0,0,0.15);
+  font-size:20px;color:#cfe9d9;font-weight:700;
+}
+.path-item img{width:100%;height:100%;object-fit:contain}
+
+/* footer hint */
+.hint{margin-top:10px;font-size:12px;color:#cfe9d9;text-align:center}
+
+/* responsive tweaks */
+@media (max-width:420px){
+  .tile{transition: transform 100ms ease, top 100ms ease, left 100ms ease;}
+  .cell{min-height:56px}
+  .path-item{width:40px;height:40px;font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <div class="title">
+      <h1>聖誕禮物合一合</h1>
+      <p>把相同的禮物合成更大的驚喜！</p>
+    </div>
+    <div class="controls">
+      <div class="scoreboard">
+        <div class="label">分數</div>
+        <div class="value" id="score">0</div>
+      </div>
+      <button class="button" id="newGame">重新開始</button>
+    </div>
+  </div>
+
+  <div class="game">
+    <div class="board" id="board">
+      <div class="grid" id="grid">
+        <!-- 16 cells as background -->
+      </div>
+
+      <!-- overlay (win/lose) -->
+      <div id="overlay" class="overlay" style="display:none;">
+        <h2 id="overlayTitle">你贏了！</h2>
+        <p id="overlayMsg">合出 2048！可以繼續挑戰隱藏禮物。</p>
+        <div style="display:flex;gap:8px;">
+          <button class="button" id="keepPlaying">繼續挑戰</button>
+          <button class="button" id="restartFromOverlay">重新開始</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="path-area">
+      <div style="font-size:13px;color:#cfe9d9">合成路徑（僅顯示已合成過的禮物）</div>
+      <div class="path-row" id="pathRow">
+        <!-- path icons will be injected here -->
+      </div>
+      <div class="hint">提示：使用鍵盤方向鍵或手機滑動控制</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/*
+  改進重點：
+  - 讓圖片(tile)精準對齊格子：使用 grid 的 cell 大小計算 --cell-size，並將 tile 絕對定位到 grid container，top/left 與 cell 完全一致（與原版 2048 行為一致）。
+  - 合成路徑只列出已合成（玩家曾經獲得過）或起始 2 的圖示；未合成的顯示 "?". (例如：當玩家曾經合出 8，path 顯示 2,4,8,? ... 直到 2048)
+  - 保持所有資源為同一資料夾：2.png,4.png,...,4096.png (若不存在對應圖檔，會顯示 "?" 或空白底)
+*/
+
+(function(){
+  const SIZE = 4;
+  const START_TILES = 2;
+  const HIDDEN_MAX = 4096;
+  const WIN_VALUE = 2048;
+
+  const gridEl = document.getElementById('grid');
+  const boardEl = document.getElementById('board');
+  const scoreEl = document.getElementById('score');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayMsg = document.getElementById('overlayMsg');
+  const newGameBtn = document.getElementById('newGame');
+  const keepPlayingBtn = document.getElementById('keepPlaying');
+  const restartFromOverlayBtn = document.getElementById('restartFromOverlay');
+  const pathRow = document.getElementById('pathRow');
+
+  let cells = []; // tiles: {id, x, y, value, merged}
+  let score = 0;
+  let won = false;
+  let over = false;
+  let nextTileId = 1;
+  let createdValuesSet = new Set(); // track values player has ever produced (for path)
+
+  // build 4x4 background cells
+  function buildGrid(){
+    gridEl.innerHTML = '';
+    for(let i=0;i<SIZE*SIZE;i++){
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      gridEl.appendChild(cell);
+    }
+    updateCellSizeCSS();
+    window.requestAnimationFrame(() => updateTilePositions()); // ensure tiles re-position if any
+  }
+
+  // compute and set --cell-size based on first cell's computed size
+  function updateCellSizeCSS(){
+    const cell = gridEl.querySelector('.cell');
+    if(!cell) return;
+    const rect = cell.getBoundingClientRect();
+    const sizePx = Math.round(rect.width);
+    gridEl.style.setProperty('--cell-size', sizePx + 'px');
+  }
+
+  // safe get cell tile by coords
+  function getCell(x,y){
+    return cells.find(t => t.x===x && t.y===y);
+  }
+
+  function removeTileById(id){
+    const idx = cells.findIndex(t=>t.id===id);
+    if(idx>=0) cells.splice(idx,1);
+  }
+
+  function addRandomTile(){
+    const empties = [];
+    for(let x=0;x<SIZE;x++) for(let y=0;y<SIZE;y++){
+      if(!getCell(x,y)) empties.push({x,y});
+    }
+    if(empties.length === 0) return false;
+    const spot = empties[Math.floor(Math.random()*empties.length)];
+    const value = Math.random() < 0.9 ? 2 : 4;
+    const tile = { id: nextTileId++, x: spot.x, y: spot.y, value: value, merged: false };
+    cells.push(tile);
+    createdValuesSet.add(value);
+    renderTiles(); // show new tile with appear position
+    return true;
+  }
+
+  // render all tiles: create DOM elements, position them exactly over cells
+  function renderTiles(){
+    // keep transitions smooth: reuse existing .tile elements when possible (by data-id),
+    // remove ones that no longer exist, add new ones.
+    const container = gridEl; // tiles absolute positioned inside grid
+    // create a map of existing tile DOM by id
+    const existing = {};
+    container.querySelectorAll('.tile').forEach(el => {
+      existing[el.dataset.id] = el;
+    });
+
+    // remove dom elements not in cells
+    for(const id in existing){
+      if(!cells.find(t => String(t.id) === String(id))){
+        existing[id].remove();
+        delete existing[id];
+      }
+    }
+
+    // create or update elements for each tile
+    for(const tile of cells){
+      let el = existing[tile.id];
+      if(!el){
+        el = document.createElement('div');
+        el.className = 'tile';
+        el.dataset.id = tile.id;
+        // image element
+        const img = document.createElement('img');
+        img.alt = String(tile.value);
+        img.draggable = false;
+        img.src = tileImageFor(tile.value);
+        img.onerror = function(){ this.style.display='none'; this.parentNode.style.background='rgba(255,255,255,0.04)'; };
+        el.appendChild(img);
+        // insert into grid container
+        container.appendChild(el);
+      } else {
+        // update image src in case value changed (merged)
+        const img = el.querySelector('img');
+        if(img && String(img.alt) !== String(tile.value)){
+          img.alt = String(tile.value);
+          img.src = tileImageFor(tile.value);
+        }
+      }
+      // set size (in case CSS var changed)
+      el.style.width = getComputedStyle(gridEl).getPropertyValue('--cell-size') || '';
+      el.style.height = getComputedStyle(gridEl).getPropertyValue('--cell-size') || '';
+      // set top/left precisely according to target cell rect relative to grid
+      positionTileElement(el, tile.x, tile.y);
+    }
+
+    // rebuild path area to reflect any newly created values
+    buildPathArea();
+  }
+
+  // compute top/left for tile in grid coordinates and set style.top/left (not transform)
+  function positionTileElement(el, x, y){
+    const cellIndex = y * SIZE + x;
+    const cellEl = gridEl.children[cellIndex];
+    if(!cellEl) return;
+    const gridRect = gridEl.getBoundingClientRect();
+    const cellRect = cellEl.getBoundingClientRect();
+    const left = Math.round(cellRect.left - gridRect.left);
+    const top = Math.round(cellRect.top - gridRect.top);
+    // apply CSS top/left to absolute positioned tile
+    // we use px values; transitions defined in CSS will animate top/left
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+  }
+
+  function tileImageFor(val){
+    return val + '.png';
+  }
+
+  function resetMergedFlags(){
+    cells.forEach(t => t.merged = false);
+  }
+
+  // Movement logic (faithful to 2048): build traversal order, for each tile move/merge to farthest
+  function move(direction){
+    if(over) return;
+    let moved = false;
+    resetMergedFlags();
+
+    const vector = { left:{x:-1,y:0}, right:{x:1,y:0}, up:{x:0,y:-1}, down:{x:0,y:1} }[direction];
+
+    // traversal order depends on direction
+    const range = n => Array.from(Array(n).keys());
+    let traversals = { x: range(SIZE), y: range(SIZE) };
+    if(direction === 'right') traversals.x = traversals.x.reverse();
+    if(direction === 'down') traversals.y = traversals.y.reverse();
+
+    // function to find farthest position for a tile
+    function findFarthestPosition(x, y, dir){
+      let previous;
+      while(true){
+        const nextX = x + dir.x, nextY = y + dir.y;
+        if(nextX < 0 || nextX >= SIZE || nextY < 0 || nextY >= SIZE) break;
+        if(getCell(nextX,nextY)) break;
+        previous = {x: nextX, y: nextY};
+        x = nextX; y = nextY;
+      }
+      return previous || {x, y};
+    }
+
+    // For each position in traversal order, attempt to move tile
+    for(const x of traversals.x){
+      for(const y of traversals.y){
+        const tile = getCell(x,y);
+        if(!tile) continue;
+        let pos = findFarthestPosition(x,y,vector);
+        const nextX = pos.x + vector.x;
+        const nextY = pos.y + vector.y;
+        // check merge possibility
+        if(nextX >=0 && nextX < SIZE && nextY >=0 && nextY < SIZE){
+          const other = getCell(nextX,nextY);
+          if(other && other.value === tile.value && !other.merged && !tile.merged){
+            // merge tile into other
+            const newValue = tile.value * 2;
+            // move tile to other's position for animation, then remove it and update other
+            tile.x = nextX; tile.y = nextY;
+            tile.merged = true;
+            other.merged = true;
+            // remove the moving tile element after positioning (we will update DOM)
+            removeTileById(tile.id); // remove moving tile data; keep 'other' but update its value
+            other.value = newValue;
+            createdValuesSet.add(newValue);
+            score += newValue;
+            moved = true;
+            // continue to next tile
+            continue;
+          }
+        }
+        // else move to farthest available position (pos holds farthest)
+        if(pos.x !== x || pos.y !== y){
+          tile.x = pos.x;
+          tile.y = pos.y;
+          moved = true;
+        }
+      }
+    }
+
+    if(moved){
+      // after move & merges, re-render positions, then add random tile
+      renderTiles();
+      // slight delay to allow visual move, then add new tile and re-render
+      setTimeout(() => {
+        addRandomTile();
+        updateScore();
+        renderTiles();
+        checkWin();
+        checkGameOver();
+      }, 120);
+    }
+  }
+
+  function checkWin(){
+    if(won) return;
+    if(cells.some(t => t.value === WIN_VALUE)){
+      won = true;
+      showOverlay(true, "通關！", "恭喜你合出 2048！你可以選擇繼續挑戰隱藏禮物。");
+    }
+  }
+
+  function checkGameOver(){
+    // if any empty cell exists -> not over
+    for(let x=0;x<SIZE;x++) for(let y=0;y<SIZE;y++){
+      if(!getCell(x,y)) return false;
+    }
+    // check for possible merges
+    for(let x=0;x<SIZE;x++){
+      for(let y=0;y<SIZE;y++){
+        const val = getCell(x,y).value;
+        const neighbors = [{x:x+1,y},{x:x-1,y},{x,y:y+1},{x,y:y-1}];
+        for(const n of neighbors){
+          if(n.x>=0 && n.x<SIZE && n.y>=0 && n.y<SIZE){
+            if(getCell(n.x,n.y).value === val) return false;
+          }
+        }
+      }
+    }
+    over = true;
+    showOverlay(false, "遊戲結束", "沒有更多步驟可以合成");
+    return true;
+  }
+
+  function updateScore(){
+    scoreEl.textContent = score;
+  }
+
+  function showOverlay(isWin, title, msg){
+    overlayTitle.textContent = title;
+    overlayMsg.textContent = msg;
+    overlay.style.display = 'flex';
+    overlay.style.pointerEvents = 'auto';
+  }
+
+  function hideOverlay(){
+    overlay.style.display = 'none';
+  }
+
+  function newGame(){
+    cells = [];
+    score = 0;
+    won = false;
+    over = false;
+    nextTileId = 1;
+    createdValuesSet = new Set([2]); // 2 is always available since starting tile can be 2 or 4; include 2 as known
+    updateScore();
+    hideOverlay();
+    buildGrid();
+    for(let i=0;i<START_TILES;i++) addRandomTile();
+    renderTiles();
+  }
+
+  // Build path area: show sequence 2,4,8,...,2048, but only values present in createdValuesSet show their image; others show '?'
+  function buildPathArea(){
+    const pathValues = [];
+    let v = 2;
+    while(v <= WIN_VALUE){
+      pathValues.push(v);
+      v *= 2;
+    }
+    // optionally include hidden 4096 as part of extended path (but per request path to 2048; 4096 is hidden tile)
+    pathRow.innerHTML = '';
+    for(const val of pathValues){
+      const item = document.createElement('div');
+      item.className = 'path-item';
+      // if value in createdValuesSet -> show image (if available); else show '?'
+      if(createdValuesSet.has(val)){
+        const img = document.createElement('img');
+        img.src = tileImageFor(val);
+        img.alt = String(val);
+        img.onerror = function(){ this.style.display='none'; item.textContent = '?'; item.style.fontSize='20px'; };
+        item.appendChild(img);
+      } else {
+        item.textContent = '?';
+      }
+      pathRow.appendChild(item);
+    }
+  }
+
+  // Input handling
+  window.addEventListener('keydown', function(e){
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].indexOf(e.key) === -1) return;
+    e.preventDefault();
+    switch(e.key){
+      case 'ArrowUp': case 'w': move('up'); break;
+      case 'ArrowDown': case 's': move('down'); break;
+      case 'ArrowLeft': case 'a': move('left'); break;
+      case 'ArrowRight': case 'd': move('right'); break;
+    }
+  });
+
+  // Touch swipe
+  let touchStart = null;
+  boardEl.addEventListener('touchstart', function(e){
+    if(!e.touches) return;
+    touchStart = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+  }, {passive:true});
+
+  boardEl.addEventListener('touchend', function(e){
+    if(!touchStart) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStart.x;
+    const dy = touch.clientY - touchStart.y;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    const threshold = 20;
+    if(Math.max(absX,absY) > threshold){
+      if(absX > absY){
+        if(dx > 0) move('right'); else move('left');
+      } else {
+        if(dy > 0) move('down'); else move('up');
+      }
+    }
+    touchStart = null;
+  }, {passive:true});
+
+  // Buttons
+  newGameBtn.addEventListener('click', newGame);
+  keepPlayingBtn.addEventListener('click', function(){
+    hideOverlay();
+  });
+  restartFromOverlayBtn.addEventListener('click', newGame);
+
+  // On resize, update cell size and reposition tiles
+  let resizeObserver = new ResizeObserver(() => {
+    updateCellSizeCSS();
+    // reposition all tile DOMs to match cell positions
+    updateTilePositions();
+  });
+  resizeObserver.observe(gridEl);
+  window.addEventListener('orientationchange', () => setTimeout(() => { updateCellSizeCSS(); updateTilePositions(); }, 200));
+
+  function updateTilePositions(){
+    gridEl.querySelectorAll('.tile').forEach(el => {
+      // find tile data by id
+      const id = el.dataset.id;
+      const tileData = cells.find(t => String(t.id) === String(id));
+      if(tileData){
+        positionTileElement(el, tileData.x, tileData.y);
+        el.style.width = getComputedStyle(gridEl).getPropertyValue('--cell-size') || '';
+        el.style.height = getComputedStyle(gridEl).getPropertyValue('--cell-size') || '';
+      } else {
+        // if no matching data, remove element
+        el.remove();
+      }
+    });
+  }
+
+  // Initialize
+  buildGrid();
+  newGame();
+
+  // Expose for debugging
+  window._game = {
+    cells, move, newGame, getScore: ()=>score, createdValuesSet
+  };
+
+})();
+</script>
+</body>
+</html>
