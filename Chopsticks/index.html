@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數學小先鋒：數字拳巔峰對決</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 核心 UI 樣式 */
+        .hand-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3rem;
+            border-width: 6px;
+            position: relative;
+            width: 10rem;
+            height: 14rem;
+        }
+        
+        .hand-player { 
+            background-color: white; 
+            border-color: #e0e7ff;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            cursor: pointer;
+        }
+        
+        .hand-ai { 
+            background-color: #0f172a; 
+            border-color: #334155;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+            cursor: pointer;
+        }
+        
+        .selected { 
+            border-color: #facc15 !important;
+            box-shadow: 0 0 0 8px rgba(250, 204, 21, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: scale(1.05);
+            background-color: #fefce8;
+        }
+        
+        .targetable { 
+            border-color: #ef4444 !important;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .7; }
+        }
+
+        .is-dead { 
+            opacity: 0.2; 
+            filter: grayscale(100%);
+            cursor: not-allowed;
+        }
+
+        .finger-count { 
+            font-size: 4.5rem;
+            font-weight: 900;
+            margin-top: 1rem;
+        }
+        
+        .finger-icon { 
+            font-size: 6rem;
+        }
+
+        .btn-control { 
+            padding: 1.25rem 2.5rem;
+            border-radius: 2rem;
+            font-weight: 900;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: all 0.2s;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border-bottom-width: 8px;
+            width: 100%;
+        }
+        
+        .btn-control:active {
+            transform: scale(0.95);
+            border-bottom-width: 0;
+            margin-top: 8px;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-12px); }
+            75% { transform: translateX(12px); }
+        }
+        .animate-shake { animation: shake 0.2s ease-in-out 2; }
+    </style>
+</head>
+<body class="bg-slate-200 min-h-screen flex items-center justify-center p-4 font-sans">
+
+    <div id="game-container" class="w-full max-w-xl bg-white rounded-[4rem] shadow-2xl overflow-hidden border-[15px] border-white">
+        
+        <!-- 頂部資訊列 -->
+        <div class="bg-indigo-700 p-8 text-white flex justify-between items-center">
+            <div>
+                <h1 class="font-black text-3xl tracking-tighter italic uppercase">Chopsticks AI</h1>
+                <p class="text-xs font-bold text-indigo-300 tracking-[0.2em] uppercase mt-1">Math Pioneer Special Edition</p>
+            </div>
+            <div id="turn-display" class="bg-indigo-900 px-6 py-3 rounded-full text-sm font-black uppercase tracking-widest shadow-inner">
+                你的回合
+            </div>
+        </div>
+
+        <div class="p-10">
+            
+            <!-- AI 區域 (敵方) -->
+            <div class="mb-12">
+                <div class="text-center mb-6 text-slate-400 text-xs font-black tracking-widest uppercase">Enemy AI (電腦對手)</div>
+                <div class="flex justify-center gap-8">
+                    <div id="ai-0" onclick="handleTargetClick(0)" class="hand-btn hand-ai">
+                        <div class="finger-icon" id="ai-icon-0">✋</div>
+                        <div class="finger-count text-yellow-400" id="ai-val-0">1</div>
+                    </div>
+                    <div id="ai-1" onclick="handleTargetClick(1)" class="hand-btn hand-ai">
+                        <div class="finger-icon" id="ai-icon-1">✋</div>
+                        <div class="finger-count text-yellow-400" id="ai-val-1">1</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 狀態訊息 -->
+            <div class="text-center h-24 flex items-center justify-center mb-10 px-6 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
+                <div id="game-msg" class="font-black text-indigo-900 tracking-tight leading-snug text-2xl">
+                    選擇你的一隻手開始進攻！
+                </div>
+            </div>
+
+            <!-- 玩家區域 (我方) -->
+            <div class="mb-12">
+                <div class="flex justify-center gap-8">
+                    <div id="player-0" onclick="handleSourceClick(0)" class="hand-btn hand-player">
+                        <div class="finger-icon" id="player-icon-0">✋</div>
+                        <div class="finger-count text-indigo-700" id="player-val-0">1</div>
+                    </div>
+                    <div id="player-1" onclick="handleSourceClick(1)" class="hand-btn hand-player">
+                        <div class="finger-icon" id="player-icon-1">✋</div>
+                        <div class="finger-count text-indigo-700" id="player-val-1">1</div>
+                    </div>
+                </div>
+                <div class="text-center mt-6 text-indigo-300 text-xs font-black tracking-widest uppercase italic tracking-widest">Your Hands (玩家)</div>
+            </div>
+
+            <!-- 控制按鈕 -->
+            <div class="flex flex-col gap-4">
+                <button id="split-btn" onclick="performSplit()" class="btn-control bg-amber-400 text-amber-900 border-amber-600 hidden">
+                    ✨ 執行分拆術 (Split)
+                </button>
+                <button onclick="resetGame()" class="btn-control bg-slate-100 text-slate-400 border-slate-200">
+                    🔄 重新開始遊戲
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let playerHands = [1, 1];
+        let aiHands = [1, 1];
+        let currentTurn = 'player';
+        let selectedHandIdx = null;
+        let isGameOver = false;
+
+        function updateUI() {
+            playerHands.forEach((val, i) => {
+                const el = document.getElementById(`player-${i}`);
+                const valEl = document.getElementById(`player-val-${i}`);
+                const iconEl = document.getElementById(`player-icon-${i}`);
+                valEl.innerText = val;
+                iconEl.innerText = val === 0 ? '✊' : '✋';
+                el.classList.toggle('is-dead', val === 0);
+                el.classList.remove('selected');
+                if (selectedHandIdx === i) el.classList.add('selected');
+            });
+
+            aiHands.forEach((val, i) => {
+                const el = document.getElementById(`ai-${i}`);
+                const valEl = document.getElementById(`ai-val-${i}`);
+                const iconEl = document.getElementById(`ai-icon-${i}`);
+                valEl.innerText = val;
+                iconEl.innerText = val === 0 ? '✊' : '✋';
+                el.classList.toggle('is-dead', val === 0);
+                el.classList.remove('targetable');
+                if (selectedHandIdx !== null && val > 0) el.classList.add('targetable');
+            });
+
+            const turnEl = document.getElementById('turn-display');
+            turnEl.innerText = currentTurn === 'player' ? '你的回合' : 'AI 思考中...';
+            
+            const splitBtn = document.getElementById('split-btn');
+            const canSplit = currentTurn === 'player' && !isGameOver && 
+                            playerHands.includes(0) && 
+                            playerHands.find(v => v > 0) % 2 === 0;
+            splitBtn.classList.toggle('hidden', !canSplit);
+        }
+
+        function handleSourceClick(idx) {
+            if (currentTurn !== 'player' || isGameOver || playerHands[idx] === 0) return;
+            selectedHandIdx = (selectedHandIdx === idx) ? null : idx;
+            document.getElementById('game-msg').innerText = selectedHandIdx !== null ? "現在點擊對手的手進行攻擊！" : "選擇你的一隻手開始進攻！";
+            updateUI();
+        }
+
+        function handleTargetClick(idx) {
+            if (currentTurn !== 'player' || isGameOver || selectedHandIdx === null || aiHands[idx] === 0) return;
+            
+            const sum = aiHands[idx] + playerHands[selectedHandIdx];
+            aiHands[idx] = sum >= 5 ? 0 : sum;
+            
+            document.getElementById(`ai-${idx}`).classList.add('animate-shake');
+            setTimeout(() => document.getElementById(`ai-${idx}`).classList.remove('animate-shake'), 400);
+
+            selectedHandIdx = null;
+            checkGameEnd();
+            if (!isGameOver) {
+                currentTurn = 'ai';
+                document.getElementById('game-msg').innerText = "漂亮的進攻！換 AI 了...";
+                updateUI();
+                setTimeout(aiTurn, 1200);
+            }
+        }
+
+        function performSplit() {
+            if (currentTurn !== 'player' || isGameOver) return;
+            const nonZeroIdx = playerHands.findIndex(v => v > 0);
+            const val = playerHands[nonZeroIdx];
+            const half = val / 2;
+            playerHands = [half, half];
+            
+            document.getElementById('game-msg').innerText = "✨ 分拆完成！戰力均分。";
+            currentTurn = 'ai';
+            updateUI();
+            setTimeout(aiTurn, 1200);
+        }
+
+        function aiTurn() {
+            if (isGameOver) return;
+            const aiAvail = aiHands.map((v, i) => ({v, i})).filter(h => h.v > 0);
+            const playerAvail = playerHands.map((v, i) => ({v, i})).filter(h => h.v > 0);
+
+            for (let ah of aiAvail) {
+                for (let ph of playerAvail) {
+                    if (ah.v + ph.v >= 5) {
+                        playerHands[ph.i] = 0;
+                        finalizeAiTurn(`💥 AI 擊中了你的 ${ph.i === 0 ? '左手' : '右手'}，使其歸零！`);
+                        return;
+                    }
+                }
+            }
+
+            const randAh = aiAvail[Math.floor(Math.random() * aiAvail.length)];
+            const randPh = playerAvail[Math.floor(Math.random() * playerAvail.length)];
+            const sum = playerHands[randPh.i] + randAh.v;
+            playerHands[randPh.i] = sum >= 5 ? 0 : sum;
+            
+            finalizeAiTurn(`🤖 AI 攻擊了你的 ${randPh.i === 0 ? '左手' : '右手'}。`);
+        }
+
+        function finalizeAiTurn(msg) {
+            document.getElementById('game-msg').innerText = msg;
+            checkGameEnd();
+            if (!isGameOver) currentTurn = 'player';
+            updateUI();
+        }
+
+        function checkGameEnd() {
+            if (aiHands.every(v => v === 0)) {
+                isGameOver = true;
+                document.getElementById('game-msg').innerHTML = "<span class='text-green-600 text-3xl font-black tracking-widest'>🏆 勝利！你贏了！</span>";
+            } else if (playerHands.every(v => v === 0)) {
+                isGameOver = true;
+                document.getElementById('game-msg').innerHTML = "<span class='text-red-600 text-3xl font-black tracking-widest'>💀 失敗！被 AI 擊敗了</span>";
+            }
+        }
+
+        function resetGame() {
+            playerHands = [1, 1];
+            aiHands = [1, 1];
+            currentTurn = 'player';
+            selectedHandIdx = null;
+            isGameOver = false;
+            document.getElementById('game-msg').innerText = "戰局重啟！請開始你的第一步。";
+            updateUI();
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
