@@ -118,9 +118,8 @@
         </div>
     </div>
 
-    <!-- SCREEN 2: GAMEPLAY (修正高寬與佈局遮擋) -->
+    <!-- SCREEN 2: GAMEPLAY -->
     <div id="game-screen" class="screen h-full w-full bg-slate-800 flex-col items-center relative overflow-hidden">
-        <!-- 戰鬥動畫視窗：改為 flex-1 彈性高度，最小保留 20vh -->
         <div class="w-full flex-1 min-h-[20vh] max-h-[40vh] relative bg-gradient-to-b from-blue-300 to-green-300 flex justify-center overflow-hidden border-b-4 border-slate-900 shrink">
              <div class="absolute bottom-0 w-full h-12 bg-green-600 skew-y-1 transform origin-bottom-right opacity-80"></div>
              <div class="absolute bottom-4 w-full h-12 bg-green-500 -skew-y-2 transform origin-bottom-left"></div>
@@ -154,7 +153,6 @@
              </div>
         </div>
 
-        <!-- 操作面板：固定於下方，動態計算 safe-area -->
         <div class="w-full bg-slate-800 flex flex-col items-center justify-between relative z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.5)] border-t border-slate-700 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shrink-0">
             <div class="w-full max-w-lg flex flex-col gap-1.5">
                <div class="flex items-center justify-between gap-2 bg-slate-700/50 p-1 rounded-xl border border-slate-600 shrink-0">
@@ -188,7 +186,6 @@
                    </div>
                    <div id="answer-display" class="w-1/3 bg-slate-700 text-white border-2 border-slate-600 rounded-xl flex items-center justify-center text-2xl md:text-4xl font-bold shadow-inner truncate px-2">?</div>
                </div>
-               <!-- 數字九宮格按鈕：利用 grid 自動伸縮 -->
                <div class="grid grid-cols-3 gap-1 h-[22vh] min-h-[160px]">
                    <button onclick="appendNumber(1)" class="numpad-btn">1</button><button onclick="appendNumber(2)" class="numpad-btn">2</button><button onclick="appendNumber(3)" class="numpad-btn">3</button>
                    <button onclick="appendNumber(4)" class="numpad-btn">4</button><button onclick="appendNumber(5)" class="numpad-btn">5</button><button onclick="appendNumber(6)" class="numpad-btn">6</button>
@@ -240,7 +237,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         let firebaseConfig;
         let appId = "husky-game";
@@ -252,15 +249,13 @@
             window.getDbCollection = (db) => collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
             window.getInitialToken = () => initialToken;
         } else {
-            // PRODUCTION
             firebaseConfig = {
               apiKey: "AIzaSyByPxGPOSCLA7slRhLGvy0KjP4OGY2gcBY",
               authDomain: "husky-calculation-battle.firebaseapp.com",
               projectId: "husky-calculation-battle",
               storageBucket: "husky-calculation-battle.firebasestorage.app",
               messagingSenderId: "236879314476",
-              appId: "1:236879314476:web:a0d76031c6cd93c8a85b89",
-              measurementId: "G-J823KXVD8T"
+              appId: "1:236879314476:web:a0d76031c6cd93c8a85b89"
             };
             window.getDbCollection = (db) => collection(db, 'leaderboard');
             window.getInitialToken = () => null;
@@ -281,7 +276,7 @@
                     else await signInAnonymously(auth);
                 } catch (authErr) {
                     console.error("Auth failed:", authErr);
-                    if(statusEl) { statusEl.innerText = "Auth Failed"; statusEl.classList.add('text-red-500'); }
+                    if(statusEl) { statusEl.innerText = "Offline"; statusEl.classList.add('text-slate-400'); }
                 }
             }
             initAuth();
@@ -309,7 +304,7 @@
                     document.getElementById('submit-score-area').style.display = 'none';
                 } catch (e) {
                     console.error("Save Error", e);
-                    alert("Could not save score. Check internet connection.");
+                    alert("Could not save score. Check connection.");
                     nameInput.disabled = false;
                 }
             };
@@ -323,12 +318,12 @@
                     renderLeaderboard(scores.slice(0, 10));
                 }, (error) => {
                     console.error("DB Error", error);
-                    document.getElementById('leaderboard-list').innerHTML = '<div class="text-red-400 text-sm">Connection Failed</div>';
+                    document.getElementById('leaderboard-list').innerHTML = '<div class="text-slate-400 text-xs text-center">Offline Mode</div>';
                 });
             }
         } catch (e) {
             console.error("Init Error", e);
-            if(statusEl) statusEl.innerText = "Config Error";
+            if(statusEl) statusEl.innerText = "Offline";
         }
 
         function renderLeaderboard(scores) {
@@ -337,11 +332,11 @@
             if (scores.length === 0) { list.innerHTML = '<div class="text-center text-slate-400 text-xs">No scores yet. Be the first!</div>'; return; }
             scores.forEach((entry, index) => {
                 const rank = index + 1;
-                let rankHtml = '';
-                if (index === 0) { rankHtml = `<div class="bg-yellow-100 text-yellow-600 p-0.5 rounded shadow-sm"><i data-lucide="crown" class="w-3.5 h-3.5 fill-current"></i></div>`; } 
-                else if (index === 1) { rankHtml = `<div class="bg-slate-100 text-slate-500 p-0.5 rounded shadow-sm"><i data-lucide="medal" class="w-3.5 h-3.5 fill-current"></i></div>`; } 
-                else if (index === 2) { rankHtml = `<div class="bg-orange-100 text-orange-600 p-0.5 rounded shadow-sm"><i data-lucide="medal" class="w-3.5 h-3.5 fill-current"></i></div>`; } 
-                else { rankHtml = `<span class="rank font-bold text-xs w-5 text-slate-400 text-center">${rank}</span>`; }
+                let rankHtml = `<span class="rank font-bold text-xs w-5 text-slate-400 text-center">${rank}</span>`;
+                if (index === 0) rankHtml = `<div class="bg-yellow-100 text-yellow-600 p-0.5 rounded shadow-sm"><i data-lucide="crown" class="w-3.5 h-3.5 fill-current"></i></div>`;
+                else if (index === 1) rankHtml = `<div class="bg-slate-100 text-slate-500 p-0.5 rounded shadow-sm"><i data-lucide="medal" class="w-3.5 h-3.5 fill-current"></i></div>`;
+                else if (index === 2) rankHtml = `<div class="bg-orange-100 text-orange-600 p-0.5 rounded shadow-sm"><i data-lucide="medal" class="w-3.5 h-3.5 fill-current"></i></div>`;
+                
                 const borderClass = index === 0 ? 'border-l-4 border-yellow-400' : (index === 1 ? 'border-l-4 border-slate-300' : (index === 2 ? 'border-l-4 border-orange-300' : ''));
                 
                 const item = document.createElement('div');
@@ -364,76 +359,283 @@
         let currentLang = 'en';
         let score = 0;
         let level = 1;
-        const EXP_NEEDED = 2; 
-        const MAX_LEVEL = 5; 
         const GAME_DURATION = 90; 
         
         let playerHP = 100;
         let playerMaxHP = 100;
         let monsterHP = 0;
         let monsterMaxHP = 0;
-        let monsterDamage = 5;
         
         let currentProblem = {};
         let currentInput = ""; 
         let isProcessing = false;
         let isGameActive = false;
-        let isPaused = false;
         let isMuted = false;
         
         let globalTimerInterval;
         let globalTimeLeft = GAME_DURATION;
         let questionTimerInterval;
         let questionTimeLeft = 100;
-        
-        let idleInterval = null;
-        let isIdleFrame1 = true;
-        let idleSpeed = 500;
-
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const audioCtx = new AudioContext();
-        let bgmInterval = null;
-        let bgmNoteIndex = 0;
 
         // Translations
         const i18n = {
             en: {
                 title: "Husky Calculation Battle",
-                subtitle: "Help Husky defeat wild monsters!",
                 instrTitle: "How to Play",
                 instrList: [ "Type answer using keypad.", "Game Time: <strong>90s</strong>. Max Level: <strong>5</strong>.", "Correct answers deal damage.", "Defeat a monster to <strong>Level Up</strong> & heal!", "<strong>Warning:</strong> Monster attacks back!" ],
                 startBtn: "Start Adventure",
                 monsterName: "Monster", bossName: "BOSS", gameMsg: "Wild monster appeared!",
-                monsterDefeated: "Defeated!", score: "Score", level: "Level",
-                victoryTitle: "Victory!", defeatTitle: "Good Try!", timeUpTitle: "Time's Up!",
-                victoryMsg: "Boss Defeated! Amazing!", defeatMsg: "You did your best!", timeUpMsg: "Good Effort!",
-                replayBtn: "Play Again", correct: "Correct!", wrong: "Missed!", monsterAttack: "Attack!",
-                langBtn: "中文", levelup: "Level Up!", confirm: "GO"
+                score: "Score", level: "Level", victoryTitle: "Victory!", defeatTitle: "Game Over!", timeUpTitle: "Time's Up!",
+                replayBtn: "Play Again", correct: "Correct!", wrong: "Missed!", monsterAttack: "Attack!", langBtn: "中文"
             },
             zh: {
                 title: "哈士奇數算大戰",
-                subtitle: "幫助哈士奇打敗野生怪物！",
                 instrTitle: "遊戲說明",
                 instrList: [ "使用鍵盤輸入答案。", "遊戲時間：<strong>90秒</strong>。最高等級：<strong>5</strong>。", "答對問題造成傷害。", "打敗怪物可<strong>升級</strong>並回血！", "<strong>注意：</strong> 怪物會反擊！" ],
                 startBtn: "開始冒險",
                 monsterName: "怪物", bossName: "首領", gameMsg: "怪物出現了！",
-                monsterDefeated: "勝利！", score: "分數", level: "等級",
-                victoryTitle: "勝利！", defeatTitle: "再接再厲!", timeUpTitle: "時間到！",
-                victoryMsg: "首領被打敗了！太棒了！", defeatMsg: "你已經很棒了！", timeUpMsg: "很棒的努力！",
-                replayBtn: "回到首頁", correct: "答對了！", wrong: "錯過了！", monsterAttack: "反擊！",
-                langBtn: "English", levelup: "升級！", confirm: "走"
+                score: "分數", level: "等級", victoryTitle: "勝利！", defeatTitle: "遊戲結束！", timeUpTitle: "時間到！",
+                replayBtn: "回到首頁", correct: "答對了！", wrong: "錯過了！", monsterAttack: "反擊！", langBtn: "English"
             }
         };
 
-        // Game Functions
-        function appendNumber(num) { if(isProcessing || !isGameActive || isPaused || currentInput.length >= 3) return; currentInput += num; updateAnswerDisplay(); }
-        function clearInput() { if(isProcessing || !isGameActive || isPaused) return; currentInput = ""; updateAnswerDisplay(); }
-        function updateAnswerDisplay() { const display = document.getElementById('answer-display'); display.innerText = currentInput === "" ? "?" : currentInput; if(currentInput !== "") display.classList.add('text-yellow-400'); else display.classList.remove('text-yellow-400'); }
+        window.onload = function() {
+            lucide.createIcons();
+            updateLanguageUI();
+        };
 
-        const BGM_NOTES = [261.63, 329.63, 392.00, 523.25]; 
-        function toggleMute() { isMuted = !isMuted; const icon = document.getElementById('mute-icon'); if(isMuted) { stopBGM(); icon.setAttribute('data-lucide', 'volume-x'); icon.classList.add('text-red-400'); } else { if(isGameActive && !isPaused) startBGM(); icon.setAttribute('data-lucide', 'volume-2'); icon.classList.remove('text-red-400'); } lucide.createIcons(); }
-        function startBGM() { if(isMuted) return; stopBGM(); }
-        function stopBGM() { if(bgmInterval) clearInterval(bgmInterval); bgmInterval = null; }
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'zh' : 'en';
+            updateLanguageUI();
+        }
+
+        function updateLanguageUI() {
+            const t = i18n[currentLang];
+            document.getElementById('title-text').innerText = t.title;
+            document.getElementById('instr-title').innerHTML = `<i data-lucide="info" class="w-4 h-4"></i> ${t.instrTitle}`;
+            document.getElementById('instr-list').innerHTML = t.instrList.map(item => `<li>${item}</li>`).join('');
+            document.getElementById('start-btn-text').innerText = t.startBtn;
+            document.getElementById('score-label').innerText = t.score;
+            document.getElementById('level-label').innerText = t.level;
+            document.getElementById('replay-btn-text').innerText = t.replayBtn;
+            document.querySelectorAll('.lang-btn-text').forEach(el => el.innerText = t.langBtn);
+            lucide.createIcons();
+        }
+
+        function startGame() {
+            score = 0;
+            level = 1;
+            playerHP = 100;
+            playerMaxHP = 100;
+            globalTimeLeft = GAME_DURATION;
+            isGameActive = true;
+
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('level-text').innerText = level;
+            document.getElementById('global-timer-container').classList.remove('hidden');
+            
+            showScreen('game-screen');
+            spawnMonster();
+            startGlobalTimer();
+            nextQuestion();
+        }
+
+        function spawnMonster() {
+            monsterMaxHP = level * 30;
+            monsterHP = monsterMaxHP;
+            const isBoss = level === 5;
+            
+            document.getElementById('enemy-name').innerText = isBoss ? i18n[currentLang].bossName : `${i18n[currentLang].monsterName} Lv.${level}`;
+            document.getElementById('boss-badge').style.display = isBoss ? 'block' : 'none';
+            document.getElementById('enemy-sprite').src = isBoss ? 'Husky5.png' : 'Husky2.png';
+            document.getElementById('enemy-atk-text').innerText = level * 8;
+            
+            updateHPDisplay();
+        }
+
+        function updateHPDisplay() {
+            document.getElementById('player-hp-text').innerText = `${playerHP}/${playerMaxHP}`;
+            document.getElementById('player-hp-bar').style.width = `${Math.max(0, (playerHP/playerMaxHP)*100)}%`;
+
+            document.getElementById('enemy-hp-text').innerText = `${monsterHP}/${monsterMaxHP}`;
+            document.getElementById('enemy-hp-bar').style.width = `${Math.max(0, (monsterHP/monsterMaxHP)*100)}%`;
+        }
+
+        function startGlobalTimer() {
+            clearInterval(globalTimerInterval);
+            document.getElementById('global-time-display').innerText = globalTimeLeft;
+            globalTimerInterval = setInterval(() => {
+                if(!isGameActive) return;
+                globalTimeLeft--;
+                document.getElementById('global-time-display').innerText = globalTimeLeft;
+                if(globalTimeLeft <= 0) endGame('timeup');
+            }, 1000);
+        }
+
+        function nextQuestion() {
+            currentInput = "";
+            updateAnswerDisplay();
+            
+            const maxNum = level * 10;
+            const n1 = Math.floor(Math.random() * maxNum) + 1;
+            const n2 = Math.floor(Math.random() * maxNum) + 1;
+            currentProblem = { num1: n1, num2: n2, ans: n1 + n2 };
+
+            document.getElementById('num1').innerText = n1;
+            document.getElementById('num2').innerText = n2;
+
+            startQuestionTimer();
+        }
+
+        function startQuestionTimer() {
+            clearInterval(questionTimerInterval);
+            questionTimeLeft = 100;
+            const timerBar = document.getElementById('timer-bar');
+            timerBar.style.width = '100%';
+
+            questionTimerInterval = setInterval(() => {
+                if(!isGameActive) return;
+                questionTimeLeft -= 2;
+                timerBar.style.width = `${questionTimeLeft}%`;
+                if(questionTimeLeft <= 0) {
+                    clearInterval(questionTimerInterval);
+                    handleWrongAnswer();
+                }
+            }, 100);
+        }
+
+        function appendNumber(num) {
+            if(isProcessing || !isGameActive || currentInput.length >= 3) return;
+            currentInput += num;
+            updateAnswerDisplay();
+        }
+
+        function clearInput() {
+            if(isProcessing || !isGameActive) return;
+            currentInput = "";
+            updateAnswerDisplay();
+        }
+
+        function updateAnswerDisplay() {
+            const display = document.getElementById('answer-display');
+            display.innerText = currentInput === "" ? "?" : currentInput;
+            if(currentInput !== "") display.classList.add('text-yellow-400');
+            else display.classList.remove('text-yellow-400');
+        }
+
+        function submitAnswer() {
+            if(isProcessing || !isGameActive || currentInput === "") return;
+            clearInterval(questionTimerInterval);
+            
+            const userAns = parseInt(currentInput);
+            if(userAns === currentProblem.ans) {
+                handleCorrectAnswer();
+            } else {
+                handleWrongAnswer();
+            }
+        }
+
+        function handleCorrectAnswer() {
+            isProcessing = true;
+            score += 100 * level;
+            monsterHP -= (20 + level * 5);
+            
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('game-msg').innerText = i18n[currentLang].correct;
+            updateHPDisplay();
+
+            if(monsterHP <= 0) {
+                monsterHP = 0;
+                updateHPDisplay();
+                setTimeout(() => levelUp(), 600);
+            } else {
+                setTimeout(() => { isProcessing = false; nextQuestion(); }, 600);
+            }
+        }
+
+        function handleWrongAnswer() {
+            isProcessing = true;
+            playerHP -= level * 8;
+            document.getElementById('game-msg').innerText = i18n[currentLang].wrong;
+            updateHPDisplay();
+
+            if(playerHP <= 0) {
+                playerHP = 0;
+                updateHPDisplay();
+                setTimeout(() => endGame('defeat'), 600);
+            } else {
+                setTimeout(() => { isProcessing = false; nextQuestion(); }, 600);
+            }
+        }
+
+        function levelUp() {
+            if(level >= 5) {
+                endGame('victory');
+                return;
+            }
+            level++;
+            playerHP = Math.min(playerMaxHP, playerHP + 30);
+            document.getElementById('level-text').innerText = level;
+            
+            const overlay = document.getElementById('levelup-overlay');
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                spawnMonster();
+                isProcessing = false;
+                nextQuestion();
+            }, 1200);
+        }
+
+        function endGame(reason) {
+            isGameActive = false;
+            clearInterval(globalTimerInterval);
+            clearInterval(questionTimerInterval);
+            document.getElementById('global-timer-container').classList.add('hidden');
+
+            const t = i18n[currentLang];
+            const titleEl = document.getElementById('victory-title');
+            const msgEl = document.getElementById('victory-msg');
+            
+            if(reason === 'victory') {
+                titleEl.innerText = t.victoryTitle;
+                msgEl.innerText = t.victoryMsg || "Boss Defeated!";
+                score += globalTimeLeft * 20; 
+            } else if(reason === 'defeat') {
+                titleEl.innerText = t.defeatTitle;
+                msgEl.innerText = t.defeatMsg || "Try Again!";
+            } else {
+                titleEl.innerText = t.timeUpTitle;
+                msgEl.innerText = t.timeUpMsg || "Time's Up!";
+            }
+
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('submit-score-area').style.display = 'flex';
+            document.getElementById('player-name-input').disabled = false;
+            showScreen('summary-screen');
+        }
+
+        function goToStartScreen() {
+            showScreen('start-screen');
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const icon = document.getElementById('mute-icon');
+            if(isMuted) {
+                icon.setAttribute('data-lucide', 'volume-x');
+                icon.classList.add('text-red-400');
+            } else {
+                icon.setAttribute('data-lucide', 'volume-2');
+                icon.classList.remove('text-red-400');
+            }
+            lucide.createIcons();
+        }
     </script>
 </body>
 </html>
