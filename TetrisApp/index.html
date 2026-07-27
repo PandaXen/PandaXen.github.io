@@ -2,46 +2,153 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris PWA</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- 確保手機全螢幕與支援安全區域，並禁止手動縮放 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <title>PWA 方塊移動遊戲</title>
+
+    <!-- 連結 Web App Manifest -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1a1a1a">
+
+    <!-- iOS 專屬 PWA 設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <style>
+        /* 徹底防止 iOS 雙擊放大與文字選取 */
+        * {
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            /* 避開 iPhone 頂端瀏海與底部 Home 條 */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .header {
+            text-align: center;
+            padding: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background: #ffffff;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .game-area {
+            flex: 1;
+            position: relative;
+            background: #ffffff;
+            overflow: hidden;
+            margin: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* 移動的方塊 */
+        #box {
+            position: absolute;
+            left: 50px;
+            top: 50px;
+            width: 60px;
+            height: 60px;
+            background-color: #007bff;
+            border-radius: 8px;
+            transition: transform 0.1s ease-out;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            background: #ffffff;
+            border-top: 1px solid #ddd;
+        }
+
+        .btn {
+            width: 80px;
+            height: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background-color: #e4e6eb;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:active {
+            background-color: #d8dadf;
+        }
+    </style>
 </head>
 <body>
-    <div class="game-container">
-        <h1>俄羅斯方塊</h1>
-        <div class="game-board-wrapper">
-            <canvas id="tetris" width="200" height="400"></canvas>
-            <div class="side-panel">
-                <div class="score-board">
-                    <p>分數: <span id="score">0</span></p>
-                    <p>消除行數: <span id="lines">0</span></p>
-                    <p>等級: <span id="level">1</span></p>
-                </div>
-                <button id="start-btn" class="btn">開始遊戲</button>
-            </div>
-        </div>
 
-        <!-- 手機觸控控制按鈕 -->
-        <div class="controls">
-            <div class="control-row">
-                <button id="btn-up" class="ctrl-btn">🔄</button>
-            </div>
-            <div class="control-row">
-                <button id="btn-left" class="ctrl-btn">⬅️</button>
-                <button id="btn-down" class="ctrl-btn">⬇️</button>
-                <button id="btn-right" class="ctrl-btn">➡️</button>
-            </div>
-        </div>
+    <div class="header">PWA 遊戲控制範例</div>
+    
+    <div class="game-area">
+        <div id="box"></div>
     </div>
 
-    <script src="script.js"></script>
+    <div class="controls">
+        <button class="btn" id="left-btn">⬅️ 左</button>
+        <button class="btn" id="right-btn">右 ➡️</button>
+    </div>
+
+    <!-- JavaScript 控制邏輯與防雙擊放大 -->
     <script>
+        let posX = 50;
+        const box = document.getElementById('box');
+        const leftBtn = document.getElementById('left-btn');
+        const rightBtn = document.getElementById('right-btn');
+
+        function updatePosition() {
+            box.style.transform = `translateX(${posX}px)`;
+        }
+
+        // 綁定向左按鈕（強制阻止預設行為，解決 iOS 雙擊放大與延遲）
+        leftBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            posX = Math.max(0, posX - 20);
+            updatePosition();
+        }, { passive: false });
+
+        leftBtn.addEventListener('click', (e) => {
+            posX = Math.max(0, posX - 20);
+            updatePosition();
+        });
+
+        // 綁定向右按鈕
+        rightBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            posX += 20;
+            updatePosition();
+        }, { passive: false });
+
+        rightBtn.addEventListener('click', (e) => {
+            posX += 20;
+            updatePosition();
+        });
+
         // 註冊 Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
+                navigator.serviceWorker.register('sw.js')
                     .then(reg => console.log('Service Worker 註冊成功:', reg.scope))
                     .catch(err => console.log('Service Worker 註冊失敗:', err));
             });
