@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris PWA</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a1a1a">
+</head>
+<body>
+    <div class="game-container">
+        <h1>俄羅斯方塊</h1>
+        <div class="game-board-wrapper">
+            <canvas id="tetris" width="200" height="400"></canvas>
+            <div class="side-panel">
+                <div class="score-board">
+                    <p>分數: <span id="score">0</span></p>
+                    <p>消除行數: <span id="lines">0</span></p>
+                    <p>等級: <span id="level">1</span></p>
+                </div>
+                <button id="start-btn" class="btn">開始遊戲</button>
+            </div>
+        </div>
+
+        <!-- 手機觸控控制按鈕 -->
+        <div class="controls">
+            <div class="control-row">
+                <button id="btn-up" class="ctrl-btn">🔄</button>
+            </div>
+            <div class="control-row">
+                <button id="btn-left" class="ctrl-btn">⬅️</button>
+                <button id="btn-down" class="ctrl-btn">⬇️</button>
+                <button id="btn-right" class="ctrl-btn">➡️</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // 註冊 Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker 註冊成功:', reg.scope))
+                    .catch(err => console.log('Service Worker 註冊失敗:', err));
+            });
+        }
+    </script>
+</body>
+</html>
