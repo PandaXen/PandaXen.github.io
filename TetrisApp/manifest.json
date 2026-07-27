@@ -1,20 +1,20 @@
 {
-    "name": "Tetris PWA",
-    "short_name": "Tetris",
-    "start_url": "./index.html",
-    "display": "standalone",
-    "background_color": "#121212",
-    "theme_color": "#1a1a1a",
-    "icons": [
-        {
-            "src": "icon-192.png",
-            "sizes": "192x192",
-            "type": "image/png"
-        },
-        {
-            "src": "icon-512.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        }
-    ]
+  "name": "PWA 方塊遊戲",
+  "short_name": "方塊遊戲",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#007bff",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
