@@ -5,7 +5,7 @@
     <!-- 確保手機全螢幕與支援安全區域，並禁止手動縮放 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <title>PWA 方塊移動遊戲</title>
+    <title>我的遊戲</title>
 
     <!-- 連結 Web App Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -16,7 +16,7 @@
     <link rel="apple-touch-icon" href="icon-192.png">
 
     <style>
-        /* 徹底防止 iOS 雙擊放大與文字選取 */
+        /* 1. 徹底防止 iOS 雙擊放大與文字選取、保留觸控操作 */
         * {
             touch-action: manipulation;
             -webkit-touch-callout: none;
@@ -29,123 +29,50 @@
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            /* 避開 iPhone 頂端瀏海與底部 Home 條 */
+            /* 2. 自動避開 iPhone 頂端瀏海/動態島與底部 Home 條 */
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        .header {
-            text-align: center;
-            padding: 15px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            background: #ffffff;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .game-area {
-            flex: 1;
-            position: relative;
-            background: #ffffff;
+            width: 100vw;
+            height: 100vh;
             overflow: hidden;
-            margin: 10px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            background-color: #000; /* 可依你原本遊戲調整背景色 */
         }
 
-        /* 移動的方塊 */
-        #box {
-            position: absolute;
-            left: 50px;
-            top: 50px;
-            width: 60px;
-            height: 60px;
-            background-color: #007bff;
-            border-radius: 8px;
-            transition: transform 0.1s ease-out;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            padding: 20px;
-            background: #ffffff;
-            border-top: 1px solid #ddd;
-        }
-
-        .btn {
-            width: 80px;
-            height: 50px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            background-color: #e4e6eb;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .btn:active {
-            background-color: #d8dadf;
+        /* ==========================================
+           【請把你的原本遊戲 CSS 樣式貼在這邊】
+           ========================================== */
+        #game-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
         }
     </style>
 </head>
 <body>
 
-    <div class="header">PWA 遊戲控制範例</div>
-    
-    <div class="game-area">
-        <div id="box"></div>
+    <!-- ==========================================
+       【請把你的原本遊戲 HTML 結構貼在這邊】
+       ========================================== -->
+    <div id="game-container">
+        <!-- 你的遊戲畫面、畫布 (canvas) 或按鈕 -->
     </div>
 
-    <div class="controls">
-        <button class="btn" id="left-btn">⬅️ 左</button>
-        <button class="btn" id="right-btn">右 ➡️</button>
-    </div>
-
-    <!-- JavaScript 控制邏輯與防雙擊放大 -->
+    <!-- JavaScript 遊戲邏輯與觸控防護 -->
     <script>
-        let posX = 50;
-        const box = document.getElementById('box');
-        const leftBtn = document.getElementById('left-btn');
-        const rightBtn = document.getElementById('right-btn');
+        /* ==========================================
+           【請把你的原本遊戲 JavaScript 邏輯貼在這邊】
+           ========================================== */
 
-        function updatePosition() {
-            box.style.transform = `translateX(${posX}px)`;
-        }
-
-        // 綁定向左按鈕（強制阻止預設行為，解決 iOS 雙擊放大與延遲）
+        // 範例：如果你有按鈕需要防止 iOS 雙擊放大延遲，可以這樣綁定：
+        /*
+        const leftBtn = document.getElementById('你的左轉按鈕ID');
         leftBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            posX = Math.max(0, posX - 20);
-            updatePosition();
+            e.preventDefault(); // 阻止 iOS 預設的縮放/滾動
+            // 你的向左移動程式碼
         }, { passive: false });
+        */
 
-        leftBtn.addEventListener('click', (e) => {
-            posX = Math.max(0, posX - 20);
-            updatePosition();
-        });
-
-        // 綁定向右按鈕
-        rightBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            posX += 20;
-            updatePosition();
-        }, { passive: false });
-
-        rightBtn.addEventListener('click', (e) => {
-            posX += 20;
-            updatePosition();
-        });
-
-        // 註冊 Service Worker
+        // 註冊 Service Worker（讓網站具備 PWA 離線與安裝能力）
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
