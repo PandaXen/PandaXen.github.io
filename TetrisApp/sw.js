@@ -1,27 +1,21 @@
-const CACHE_NAME = 'tetris-pwa-v1';
-const assetsToCache = [
-    './index.html',
-    './style.css',
-    './script.js',
-    './manifest.json'
+const CACHE_NAME = 'pwa-game-cache-v1';
+const urlsToCache = [
+  './index.html',
+  './manifest.json'
 ];
 
-// 安裝 Service Worker 並快取檔案
+// 安裝時快取核心檔案
 self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                return cache.addAll(assetsToCache);
-            })
-    );
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(urlsToCache))
+  );
 });
 
-// 快取攔截與回應
+// 攔截網路請求並支援離線讀取
 self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                return response || fetch(event.request);
-            })
-    );
+  event.respondWith(
+    caches.match(event.request)
+      .then(response => response || fetch(event.request))
+  );
 });
