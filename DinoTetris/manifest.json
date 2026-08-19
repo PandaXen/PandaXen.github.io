@@ -1,0 +1,47 @@
+{
+  "name": "Dino Tetris - Dinosaur Puzzle Game",
+  "short_name": "Dino Tetris",
+  "description": "A colorful dinosaur-themed Tetris game. Play offline on your iPhone as a PWA.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#228B22",
+  "theme_color": "#6B8E23",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["games", "entertainment", "puzzle"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Dino Tetris Game Screen"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Start New Game",
+      "short_name": "New Game",
+      "description": "Start a new Dino Tetris game immediately",
+      "url": "./index.html",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
