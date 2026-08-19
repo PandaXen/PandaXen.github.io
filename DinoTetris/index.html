@@ -1,1 +1,930 @@
-123
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#6B8E23" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#2F4F4F" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Colorful dinosaur-themed Tetris game. Installable offline PWA for iPhone and desktop.">
+<meta name="application-name" content="Dino Tetris">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dino Tetris">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta name="msapplication-TileColor" content="#6B8E23">
+<meta name="msapplication-tap-highlight" content="no">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<title>Dino Tetris 🦖</title>
+
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Comic Sans MS', 'Trebuchet MS', sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: linear-gradient(180deg, #87CEEB 0%, #98FB98 50%, #228B22 100%);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+    position: relative;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: contain;
+    touch-action: manipulation;
+  }
+
+  body::before {
+    content: '🌴';
+    position: fixed;
+    font-size: 60px;
+    bottom: 0;
+    left: 5%;
+    z-index: 0;
+  }
+  body::after {
+    content: '🌴';
+    position: fixed;
+    font-size: 60px;
+    bottom: 0;
+    right: 5%;
+    z-index: 0;
+  }
+
+  .game-wrapper {
+    display: flex;
+    gap: 30px;
+    background: rgba(34, 139, 34, 0.3);
+    padding: 30px;
+    border-radius: 25px;
+    border: 5px solid #8B4513;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    position: relative;
+    z-index: 1;
+  }
+
+  .game-title {
+    text-align: center;
+    font-size: 36px;
+    font-weight: bold;
+    background: linear-gradient(90deg, #FF6347, #FFD700, #32CD32, #FF6347);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+    letter-spacing: 2px;
+  }
+
+  .game-title::before { content: '🦖 '; }
+  .game-title::after { content: ' 🦕'; }
+
+  .left-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .game-board-container {
+    position: relative;
+    padding: 10px;
+    background: linear-gradient(135deg, #6B8E23, #556B2F);
+    border-radius: 15px;
+    border: 4px solid #2F4F4F;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+  }
+
+  canvas#gameCanvas {
+    display: block;
+    background: linear-gradient(180deg, #00001a 0%, #001a33 100%);
+    border-radius: 8px;
+    box-shadow: 0 0 30px rgba(0, 255, 100, 0.2);
+  }
+
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 200px;
+  }
+
+  .panel-box {
+    background: linear-gradient(135deg, #FFF8DC, #FFEFD5);
+    border: 4px solid #8B4513;
+    border-radius: 15px;
+    padding: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  .panel-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #8B4513;
+    text-align: center;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 2px dashed #8B4513;
+    padding-bottom: 5px;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: bold;
+    text-align: center;
+    color: #228B22;
+    font-family: 'Courier New', monospace;
+    text-shadow: 1px 1px 0 #FFD700;
+  }
+
+  #nextCanvas {
+    display: block;
+    margin: 0 auto;
+    background: linear-gradient(180deg, #00001a 0%, #001a33 100%);
+    border-radius: 6px;
+  }
+
+  .dino-display {
+    text-align: center;
+    font-size: 40px;
+    padding: 10px 0;
+  }
+
+  .controls-box {
+    font-size: 13px;
+    color: #556B2F;
+    line-height: 1.8;
+  }
+
+  .controls-box .key {
+    display: inline-block;
+    background: #228B22;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-weight: bold;
+    min-width: 22px;
+    text-align: center;
+    box-shadow: 0 2px 0 #1a6b1a;
+    margin: 0 2px;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    font-family: inherit;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  .btn-start {
+    background: linear-gradient(135deg, #FF6347, #FF4500);
+    color: white;
+  }
+  .btn-start:hover { background: linear-gradient(135deg, #FF7F50, #FF6347); }
+  .btn-pause {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #554200;
+  }
+  .btn-pause:hover { background: linear-gradient(135deg, #FFE066, #FFBF00); }
+
+  .overlay {
+    position: absolute;
+    top: 10px; left: 10px; right: 10px; bottom: 10px;
+    background: rgba(0, 0, 0, 0.75);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 20px;
+    text-align: center;
+    gap: 15px;
+    z-index: 10;
+  }
+  .overlay.hidden { display: none; }
+  .overlay-emoji { font-size: 60px; }
+  .overlay-title {
+    font-size: 32px;
+    font-weight: bold;
+    background: linear-gradient(90deg, #FF6347, #FFD700);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .dino-float { animation: float 2s ease-in-out infinite; }
+
+  @media (max-width: 780px) {
+    body { padding: 10px; align-items: flex-start; }
+    .game-wrapper {
+      flex-direction: column;
+      gap: 14px;
+      padding: 16px;
+      max-width: 440px;
+      width: 100%;
+    }
+    .game-title { font-size: 26px; margin-bottom: 8px; letter-spacing: 1px; }
+    .left-panel, .right-panel { width: 100%; gap: 12px; }
+    .game-board-container { display: flex; justify-content: center; padding: 6px; }
+    canvas#gameCanvas {
+      width: 100%;
+      max-width: 320px;
+      height: auto;
+      aspect-ratio: 1 / 2;
+    }
+    .right-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .right-panel > .panel-box:nth-child(1) { grid-column: span 3; }
+    .right-panel > .panel-box:nth-child(7),
+    .right-panel > .panel-box:nth-child(8),
+    .right-panel > .panel-box:nth-child(9) { grid-column: span 3; }
+    .panel-box { padding: 10px; border-radius: 12px; }
+    .panel-title { font-size: 12px; margin-bottom: 6px; padding-bottom: 4px; }
+    .stat-value { font-size: 22px; }
+    .dino-display { font-size: 30px; padding: 4px 0; }
+    .btn { padding: 10px; font-size: 14px; }
+    .controls-box { font-size: 11px; line-height: 1.6; }
+    .key { font-size: 10px; padding: 1px 6px !important; min-width: 18px !important; }
+  }
+
+  @media (max-width: 780px) {
+    .touch-controls { display: grid !important; }
+  }
+
+  .touch-controls {
+    display: none;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+    width: 100%;
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 4px;
+  }
+  .touch-btn {
+    user-select: none;
+    -webkit-user-select: none;
+    background: linear-gradient(135deg, #228B22, #2E7D32);
+    color: white;
+    font-weight: bold;
+    font-size: 22px;
+    border: 3px solid #1B5E20;
+    border-radius: 14px;
+    padding: 14px 0;
+    text-align: center;
+    box-shadow: 0 4px 0 #145214;
+    cursor: pointer;
+    transition: transform 0.05s, box-shadow 0.05s;
+    font-family: inherit;
+    touch-action: manipulation;
+  }
+  .touch-btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #145214;
+  }
+  .touch-btn.wide { grid-column: span 2; font-size: 14px; }
+  .touch-btn.rot { background: linear-gradient(135deg, #FF9F45, #FF6347); border-color: #CC4444; box-shadow: 0 4px 0 #993333; }
+  .touch-btn.drop { background: linear-gradient(135deg, #B983FF, #4D96FF); border-color: #3A76CC; box-shadow: 0 4px 0 #285599; }
+  .touch-btn.hard { background: linear-gradient(135deg, #FFD93D, #FF8FB1); border-color: #CC6F8F; box-shadow: 0 4px 0 #99526B; color:#552244; }
+
+  .install-banner {
+    display: none;
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #FFF8DC, #FFEFD5);
+    border: 3px solid #8B4513;
+    border-radius: 14px;
+    padding: 12px 16px;
+    z-index: 999;
+    max-width: 92vw;
+    width: 380px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    gap: 10px;
+    align-items: center;
+  }
+  .install-banner.show { display: flex; }
+  .install-icon { font-size: 36px; flex-shrink: 0; }
+  .install-text { flex: 1; font-size: 13px; color: #5D4037; line-height: 1.4; }
+  .install-text strong { color: #2E7D32; display: block; font-size: 14px; }
+  .install-btn {
+    background: linear-gradient(135deg, #FF6347, #FF4500);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.2);
+  }
+  .install-close {
+    background: none; border: none; color: #8B4513; cursor: pointer;
+    font-size: 20px; padding: 0 4px; flex-shrink: 0; line-height: 1;
+  }
+</style>
+</head>
+<body>
+
+<div class="game-wrapper">
+  <div class="left-panel">
+    <div class="game-title">DINO TETRIS</div>
+    <div class="game-board-container">
+      <canvas id="gameCanvas" width="300" height="600"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="overlay-emoji dino-float">🦖</div>
+        <div class="overlay-title">READY TO ROAR?</div>
+        <div>Press <span class="key" style="background:#FF6347;">START</span> or hit <span class="key">SPACE</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="panel-box">
+      <div class="panel-title">🦕 Next Dino</div>
+      <canvas id="nextCanvas" width="140" height="140"></canvas>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">🏆 Score</div>
+      <div class="stat-value" id="score">0</div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">📊 Level</div>
+      <div class="stat-value" id="level">1</div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-title">🧩 Lines</div>
+      <div class="stat-value" id="lines">0</div>
+    </div>
+    <div class="panel-box dino-display dino-float">
+      🦖🦕🦖
+    </div>
+    <button class="btn btn-start" id="startBtn">▶ START GAME</button>
+    <button class="btn btn-pause" id="pauseBtn">⏸ PAUSE</button>
+    <div class="panel-box controls-box">
+      <div class="panel-title">🎮 Controls</div>
+      <div><span class="key">←</span><span class="key">→</span> Move</div>
+      <div><span class="key">↓</span> Soft Drop</div>
+      <div><span class="key">↑</span> Rotate</div>
+      <div><span class="key">SPACE</span> Hard Drop</div>
+      <div><span class="key">P</span> Pause</div>
+    </div>
+  </div>
+</div>
+
+<div class="touch-controls" id="touchControls">
+  <button class="touch-btn" data-act="left" aria-label="Move Left">◀</button>
+  <button class="touch-btn rot" data-act="rotate" aria-label="Rotate">🔃</button>
+  <button class="touch-btn" data-act="right" aria-label="Move Right">▶</button>
+  <button class="touch-btn drop" data-act="soft" aria-label="Soft Drop">▼</button>
+  <button class="touch-btn hard wide" data-act="hard" aria-label="Hard Drop">⬇ HARD DROP</button>
+</div>
+
+<div class="install-banner" id="installBanner" role="dialog" aria-live="polite">
+  <div class="install-icon">🦖</div>
+  <div class="install-text">
+    <strong>Add to Home Screen</strong>
+    Install Dino Tetris! Tap Share → Add to Home Screen.
+  </div>
+  <button class="install-btn" id="installBtn" aria-label="Install help">Help</button>
+  <button class="install-close" id="installClose" aria-label="Dismiss">×</button>
+</div>
+
+<script>
+(function() {
+  const COLS = 10;
+  const ROWS = 20;
+  const BLOCK = 30;
+  const NEXT_BLOCK = 28;
+
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const nextCanvas = document.getElementById('nextCanvas');
+  const nctx = nextCanvas.getContext('2d');
+
+  const scoreEl = document.getElementById('score');
+  const levelEl = document.getElementById('level');
+  const linesEl = document.getElementById('lines');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+
+  // Dino-themed colors (named after dinosaurs)
+  const COLORS = {
+    I: { fill: '#FF6B6B', light: '#FFB3B3', dark: '#CC4444', dino: 'T-Rex' },  // Red - Tyrannosaurus
+    O: { fill: '#FFD93D', light: '#FFF0A3', dark: '#CCB030', dino: 'Triceratops' }, // Yellow - Triceratops
+    T: { fill: '#6BCB77', light: '#B3E5BC', dark: '#4DA056', dino: 'Stegosaurus' }, // Green - Stegosaurus
+    S: { fill: '#4D96FF', light: '#A6CCFF', dark: '#3A76CC', dino: 'Brachiosaurus' }, // Blue - Brachiosaurus
+    Z: { fill: '#FF8FB1', light: '#FFC8D9', dark: '#CC6F8F', dino: 'Velociraptor' }, // Pink - Velociraptor
+    J: { fill: '#B983FF', light: '#DCC2FF', dark: '#8E5ECC', dino: 'Ankylosaurus' }, // Purple - Ankylosaurus
+    L: { fill: '#FF9F45', light: '#FFD2A8', dark: '#CC7F36', dino: 'Pterodactyl' },  // Orange - Pterodactyl
+  };
+
+  const SHAPES = {
+    I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+    O: [[1,1],[1,1]],
+    T: [[0,1,0],[1,1,1],[0,0,0]],
+    S: [[0,1,1],[1,1,0],[0,0,0]],
+    Z: [[1,1,0],[0,1,1],[0,0,0]],
+    J: [[1,0,0],[1,1,1],[0,0,0]],
+    L: [[0,0,1],[1,1,1],[0,0,0]],
+  };
+
+  let grid, current, next, pos, score, level, lines, gameState, dropCounter, dropInterval, lastTime, rafId;
+
+  function resetGame() {
+    grid = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+    score = 0; level = 1; lines = 0;
+    dropInterval = 1000;
+    dropCounter = 0; lastTime = 0;
+    next = randomPiece();
+    spawnPiece();
+    updateStats();
+  }
+
+  function randomPiece() {
+    const keys = Object.keys(SHAPES);
+    const k = keys[Math.floor(Math.random() * keys.length)];
+    return { type: k, shape: SHAPES[k].map(r => r.slice()) };
+  }
+
+  function spawnPiece() {
+    current = next;
+    next = randomPiece();
+    pos = { x: Math.floor((COLS - current.shape[0].length) / 2), y: 0 };
+    if (collide(current.shape, pos, grid)) {
+      gameOver();
+    }
+  }
+
+  function collide(shape, p, g) {
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        if (!shape[y][x]) continue;
+        const nx = p.x + x, ny = p.y + y;
+        if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
+        if (ny >= 0 && g[ny][nx]) return true;
+      }
+    }
+    return false;
+  }
+
+  function merge(shape, p, g, type) {
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        if (shape[y][x]) {
+          const ny = p.y + y;
+          if (ny >= 0) g[ny][p.x + x] = type;
+        }
+      }
+    }
+  }
+
+  function rotate(shape) {
+    const n = shape.length;
+    const res = Array.from({length: n}, () => Array(n).fill(0));
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        res[x][n - 1 - y] = shape[y][x];
+      }
+    }
+    return res;
+  }
+
+  function tryRotate() {
+    const rotated = rotate(current.shape);
+    const kicks = [0, -1, 1, -2, 2];
+    for (const k of kicks) {
+      if (!collide(rotated, { x: pos.x + k, y: pos.y }, grid)) {
+        current.shape = rotated;
+        pos.x += k;
+        return;
+      }
+    }
+  }
+
+  function move(dx) {
+    if (!collide(current.shape, { x: pos.x + dx, y: pos.y }, grid)) pos.x += dx;
+  }
+
+  function softDrop() {
+    if (!collide(current.shape, { x: pos.x, y: pos.y + 1 }, grid)) {
+      pos.y++;
+      score += 1;
+      updateStats();
+    } else {
+      lockPiece();
+    }
+    dropCounter = 0;
+  }
+
+  function hardDrop() {
+    let dropped = 0;
+    while (!collide(current.shape, { x: pos.x, y: pos.y + 1 }, grid)) {
+      pos.y++;
+      dropped++;
+    }
+    score += dropped * 2;
+    lockPiece();
+  }
+
+  function lockPiece() {
+    merge(current.shape, pos, grid, current.type);
+    clearLines();
+    spawnPiece();
+    updateStats();
+  }
+
+  function clearLines() {
+    let cleared = 0;
+    for (let y = ROWS - 1; y >= 0; y--) {
+      if (grid[y].every(c => c !== 0)) {
+        grid.splice(y, 1);
+        grid.unshift(Array(COLS).fill(0));
+        cleared++;
+        y++;
+      }
+    }
+    if (cleared > 0) {
+      const points = [0, 100, 300, 500, 800];
+      score += points[cleared] * level;
+      lines += cleared;
+      const newLevel = Math.floor(lines / 10) + 1;
+      if (newLevel > level) {
+        level = newLevel;
+        dropInterval = Math.max(100, 1000 - (level - 1) * 80);
+      }
+    }
+  }
+
+  function updateStats() {
+    scoreEl.textContent = score;
+    levelEl.textContent = level;
+    linesEl.textContent = lines;
+  }
+
+  function drawBlock(c, x, y, size, type, ghost=false) {
+    const col = COLORS[type];
+    if (ghost) {
+      c.fillStyle = 'rgba(255,255,255,0.15)';
+      c.fillRect(x, y, size, size);
+      c.strokeStyle = 'rgba(255,255,255,0.3)';
+      c.lineWidth = 2;
+      c.strokeRect(x+1, y+1, size-2, size-2);
+      return;
+    }
+    // Main
+    c.fillStyle = col.fill;
+    c.fillRect(x, y, size, size);
+    // Highlight
+    c.fillStyle = col.light;
+    c.fillRect(x, y, size, size * 0.22);
+    c.fillRect(x, y, size * 0.22, size);
+    // Shadow
+    c.fillStyle = col.dark;
+    c.fillRect(x, y + size - size*0.18, size, size*0.18);
+    c.fillRect(x + size - size*0.18, y, size*0.18, size);
+    // Border
+    c.strokeStyle = '#000';
+    c.lineWidth = 1;
+    c.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+    // Dino scale pattern (little triangle scales)
+    c.fillStyle = col.light;
+    const sx = x + size * 0.62;
+    const sy = y + size * 0.35;
+    const ts = size * 0.18;
+    c.beginPath();
+    c.moveTo(sx, sy);
+    c.lineTo(sx + ts, sy + ts);
+    c.lineTo(sx - ts, sy + ts);
+    c.closePath();
+    c.fill();
+  }
+
+  function drawGridBg() {
+    // Stars
+    for (let i = 0; i < 30; i++) {
+      const sx = (i * 97) % canvas.width;
+      const sy = (i * 53) % canvas.height;
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.3 + (i % 5) * 0.1) + ')';
+      ctx.fillRect(sx, sy, 2, 2);
+    }
+    // Grid lines
+    ctx.strokeStyle = 'rgba(0, 255, 100, 0.08)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= COLS; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * BLOCK, 0);
+      ctx.lineTo(x * BLOCK, ROWS * BLOCK);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= ROWS; y++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * BLOCK);
+      ctx.lineTo(COLS * BLOCK, y * BLOCK);
+      ctx.stroke();
+    }
+  }
+
+  function getGhostPos() {
+    let gy = pos.y;
+    while (!collide(current.shape, { x: pos.x, y: gy + 1 }, grid)) gy++;
+    return { x: pos.x, y: gy };
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGridBg();
+
+    // Locked blocks
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        if (grid[y][x]) {
+          drawBlock(ctx, x * BLOCK, y * BLOCK, BLOCK, grid[y][x]);
+        }
+      }
+    }
+
+    if (gameState === 'playing' || gameState === 'paused') {
+      // Ghost
+      const gp = getGhostPos();
+      for (let y = 0; y < current.shape.length; y++) {
+        for (let x = 0; x < current.shape[y].length; x++) {
+          if (current.shape[y][x]) {
+            drawBlock(ctx, (gp.x + x) * BLOCK, (gp.y + y) * BLOCK, 30, current.type, true);
+          }
+        }
+      }
+      // Current
+      for (let y = 0; y < current.shape.length; y++) {
+        for (let x = 0; x < current.shape[y].length; x++) {
+          if (current.shape[y][x]) {
+            drawBlock(ctx, (pos.x + x) * BLOCK, (pos.y + y) * BLOCK, 30, current.type);
+          }
+        }
+      }
+    }
+  }
+
+  function drawNext() {
+    nctx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+    // Stars
+    for (let i = 0; i < 10; i++) {
+      nctx.fillStyle = 'rgba(255,255,255,' + (0.3 + (i % 3) * 0.1) + ')';
+      nctx.fillRect((i*41)%nextCanvas.width, (i*29)%nextCanvas.height, 2, 2);
+    }
+    if (!next) return;
+    const s = next.shape;
+    const w = s[0].length * NEXT_BLOCK;
+    const h = s.length * NEXT_BLOCK;
+    const offX = (nextCanvas.width - w) / 2;
+    const offY = (nextCanvas.height - h) / 2;
+    for (let y = 0; y < s.length; y++) {
+      for (let x = 0; x < s[y].length; x++) {
+        if (s[y][x]) {
+          drawBlock(nctx, offX + x * NEXT_BLOCK, offY + y * NEXT_BLOCK, NEXT_BLOCK, next.type);
+        }
+      }
+    }
+  }
+
+  function update(time = 0) {
+    if (gameState !== 'playing') return;
+    const delta = time - lastTime;
+    lastTime = time;
+    dropCounter += delta;
+    if (dropCounter > dropInterval) {
+      if (!collide(current.shape, { x: pos.x, y: pos.y + 1 }, grid)) {
+        pos.y++;
+      } else {
+        lockPiece();
+      }
+      dropCounter = 0;
+    }
+    draw();
+    drawNext();
+    rafId = requestAnimationFrame(update);
+  }
+
+  function startGame() {
+    resetGame();
+    gameState = 'playing';
+    overlay.classList.add('hidden');
+    startBtn.textContent = '🔄 RESTART';
+    pauseBtn.textContent = '⏸ PAUSE';
+    cancelAnimationFrame(rafId);
+    lastTime = performance.now();
+    rafId = requestAnimationFrame(update);
+  }
+
+  function togglePause() {
+    if (gameState === 'playing') {
+      gameState = 'paused';
+      overlay.classList.remove('hidden');
+      overlay.querySelector('.overlay-emoji').textContent = '⏸';
+      overlay.querySelector('.overlay-title').textContent = 'PAUSED';
+      overlay.querySelector('div:last-child').textContent = 'Press P or click Resume';
+      pauseBtn.textContent = '▶ RESUME';
+      draw();
+    } else if (gameState === 'paused') {
+      gameState = 'playing';
+      overlay.classList.add('hidden');
+      pauseBtn.textContent = '⏸ PAUSE';
+      lastTime = performance.now();
+      rafId = requestAnimationFrame(update);
+    }
+  }
+
+  function gameOver() {
+    gameState = 'gameover';
+    overlay.classList.remove('hidden');
+    overlay.querySelector('.overlay-emoji').textContent = '💀🦖';
+    overlay.querySelector('.overlay-title').textContent = 'EXTINCT!';
+    overlay.querySelector('div:last-child').innerHTML = 'Score: <strong>' + score + '</strong> — Press START to retry';
+    startBtn.textContent = '🔄 PLAY AGAIN';
+    cancelAnimationFrame(rafId);
+    draw();
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === ' ' && (gameState !== 'playing')) {
+      e.preventDefault();
+      startGame();
+      return;
+    }
+    if (gameState !== 'playing') {
+      if (e.key.toLowerCase() === 'p' && gameState === 'paused') togglePause();
+      return;
+    }
+    switch(e.key) {
+      case 'ArrowLeft': move(-1); draw(); break;
+      case 'ArrowRight': move(1); draw(); break;
+      case 'ArrowDown': softDrop(); break;
+      case 'ArrowUp': tryRotate(); draw(); break;
+      case ' ': e.preventDefault(); hardDrop(); draw(); break;
+      case 'p': case 'P': togglePause(); break;
+    }
+  });
+
+  startBtn.addEventListener('click', startGame);
+  pauseBtn.addEventListener('click', togglePause);
+
+  document.querySelectorAll('.touch-btn').forEach(function(btn) {
+    function act() {
+      if (gameState === 'idle' || gameState === 'gameover') { startGame(); return; }
+      var a = btn.getAttribute('data-act');
+      if (gameState !== 'playing' && a !== 'hard') return;
+      switch(a) {
+        case 'left':   move(-1); draw(); break;
+        case 'right':  move(1); draw(); break;
+        case 'rotate': tryRotate(); draw(); break;
+        case 'soft':   softDrop(); break;
+        case 'hard':   hardDrop(); draw(); break;
+      }
+    }
+    btn.addEventListener('click', function(e) { e.preventDefault(); act(); });
+    btn.addEventListener('touchstart', function(e) {
+      e.preventDefault(); act();
+    }, { passive: false });
+  });
+
+  var holdTimer = null;
+  function startHold(fn, first) {
+    clearInterval(holdTimer);
+    fn();
+    holdTimer = setTimeout(function() {
+      holdTimer = setInterval(fn, 55);
+    }, first || 200);
+  }
+  function stopHold() { clearInterval(holdTimer); holdTimer = null; }
+  var tc = document.getElementById('touchControls');
+  if (tc) {
+    tc.addEventListener('touchstart', function(e) {
+      var t = e.target.closest('.touch-btn'); if (!t) return;
+      var a = t.getAttribute('data-act');
+      if (a === 'left') { e.preventDefault(); startHold(function(){ if (gameState==='playing'){ move(-1); draw();} }, 160); }
+      if (a === 'right'){ e.preventDefault(); startHold(function(){ if (gameState==='playing'){ move(1); draw();} }, 160); }
+      if (a === 'soft') { e.preventDefault(); startHold(function(){ if (gameState==='playing') softDrop(); }, 100); }
+    }, { passive: false });
+    tc.addEventListener('touchend', stopHold);
+    tc.addEventListener('touchcancel', stopHold);
+    tc.addEventListener('mousedown', function(e) {
+      var t = e.target.closest('.touch-btn'); if (!t) return;
+      var a = t.getAttribute('data-act');
+      if (a === 'left') startHold(function(){ if (gameState==='playing'){ move(-1); draw();} }, 160);
+      if (a === 'right')startHold(function(){ if (gameState==='playing'){ move(1); draw();} }, 160);
+      if (a === 'soft') startHold(function(){ if (gameState==='playing') softDrop(); }, 100);
+    });
+    tc.addEventListener('mouseup', stopHold);
+    tc.addEventListener('mouseleave', stopHold);
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('./sw.js', { scope: './' })
+        .then(function(reg) { console.log('SW registered:', reg.scope); })
+        .catch(function(err) { console.warn('SW registration failed:', err); });
+    });
+  }
+
+  (function splashScreen() {
+    try {
+      if (!(window.navigator && /iPhone|iPad|iPod/i.test(window.navigator.userAgent))) return;
+      var w = screen.width, h = screen.height;
+      if (w > h) { var t = w; w = h; h = t; }
+      var ratio = window.devicePixelRatio || 1;
+      var c = document.createElement('canvas');
+      c.width = Math.round(w * ratio); c.height = Math.round(h * ratio);
+      var g = c.getContext('2d');
+      var grd = g.createLinearGradient(0, 0, 0, c.height);
+      grd.addColorStop(0, '#87CEEB'); grd.addColorStop(0.5, '#98FB98'); grd.addColorStop(1, '#228B22');
+      g.fillStyle = grd; g.fillRect(0, 0, c.width, c.height);
+      g.textAlign = 'center';
+      g.font = 'bold ' + Math.round(c.height * 0.09) + 'px Comic Sans MS, Trebuchet MS, sans-serif';
+      var grd2 = g.createLinearGradient(0, 0, c.width, 0);
+      grd2.addColorStop(0, '#FF6347'); grd2.addColorStop(0.5, '#FFD700'); grd2.addColorStop(1, '#FF6347');
+      g.fillStyle = '#5C2020'; g.fillText('🦖 DINO TETRIS 🦕', c.width/2 + 2, c.height/2 + 2);
+      g.fillStyle = grd2;    g.fillText('🦖 DINO TETRIS 🦕', c.width/2, c.height/2);
+      g.font = 'bold ' + Math.round(c.height * 0.03) + 'px sans-serif';
+      g.fillStyle = '#1B5E20';
+      g.fillText('Loading game...', c.width/2, c.height * 0.72);
+      var link = document.createElement('link');
+      link.rel = 'apple-touch-startup-image';
+      link.href = c.toDataURL('image/png');
+      link.media = '(orientation: portrait) and (device-width: ' + w + 'px) and (-webkit-device-pixel-ratio: ' + ratio + ')';
+      document.head.appendChild(link);
+    } catch(e) {}
+  })();
+
+  (function installPrompt() {
+    var banner = document.getElementById('installBanner');
+    var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    var isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (window.navigator.standalone === true);
+    if (!banner || isStandalone) return;
+    var deferred = null;
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault(); deferred = e;
+      banner.querySelector('.install-text strong').textContent = 'Install Dino Tetris';
+      banner.querySelector('.install-text').childNodes[2].nodeValue = ' Tap Install below to add to Home Screen.';
+      banner.querySelector('#installBtn').textContent = 'Install';
+      if (!localStorage.getItem('dinotetris_banner_dismissed')) banner.classList.add('show');
+    });
+    document.getElementById('installBtn').addEventListener('click', function() {
+      if (deferred) { deferred.prompt(); deferred.userChoice.then(function(){ deferred = null; }); banner.classList.remove('show'); return; }
+      if (isIOS) {
+        alert('🦖 Install on iPhone:\n\n1. Tap the Share button ⎋ at the bottom\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" in the top right');
+      }
+    });
+    document.getElementById('installClose').addEventListener('click', function() {
+      banner.classList.remove('show');
+      try { localStorage.setItem('dinotetris_banner_dismissed', '1'); } catch(e){}
+    });
+    if (isIOS && !localStorage.getItem('dinotetris_banner_dismissed')) {
+      setTimeout(function(){ banner.classList.add('show'); }, 3500);
+    }
+  })();
+
+  // Initial render
+  resetGame();
+  gameState = 'idle';
+  draw();
+  drawNext();
+})();
+</script>
+
+</body>
+</html>
